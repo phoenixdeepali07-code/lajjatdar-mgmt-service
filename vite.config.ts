@@ -6,12 +6,16 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
-  base: '/lajjatdar-mgmt-service/',
+  base: mode === 'production' ? '/lajjatdar-mgmt-service/' : '/',
+  server: {
+    port: 5174,
+    strictPort: true,
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
-}) // Triggering final deployment fix
+}))
