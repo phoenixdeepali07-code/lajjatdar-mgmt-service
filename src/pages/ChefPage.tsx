@@ -1,0 +1,131 @@
+import React from 'react';
+import { useStore } from '../hooks/useStore';
+import { ChefHat, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+const ChefPage: React.FC = () => {
+  const { orders, updateOrderStatus } = useStore();
+
+  const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'preparing');
+  const readyOrders = orders.filter(o => o.status === 'ready');
+
+  return (
+    <div className="flex flex-col min-h-screen bg-zinc-950">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-zinc-900/50 backdrop-blur-xl border-b border-zinc-800 p-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-emerald-500/10 rounded-2xl">
+              <ChefHat className="text-emerald-500" size={24} />
+            </div>
+            <div>
+              <h1 className="text-xl font-black text-white tracking-tighter uppercase">Kitchen Display</h1>
+              <div className="flex items-center gap-2 text-xs text-zinc-500 font-bold uppercase tracking-widest">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                Chef Station • Main Kitchen
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex gap-4">
+            <div className="flex flex-col items-end">
+              <span className="text-xs font-bold text-zinc-500 uppercase">Active</span>
+              <span className="text-xl font-black text-white">{activeOrders.length}</span>
+            </div>
+            <div className="w-px h-8 bg-zinc-800 self-center"></div>
+            <div className="flex flex-col items-end">
+              <span className="text-xs font-bold text-zinc-500 uppercase">Ready</span>
+              <span className="text-xl font-black text-emerald-500">{readyOrders.length}</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-1 max-w-7xl mx-auto w-full p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {activeOrders.length === 0 ? (
+            <div className="col-span-full py-20 flex flex-col items-center justify-center text-zinc-700 gap-4">
+              <ChefHat size={80} className="opacity-10" />
+              <p className="text-xl font-bold tracking-tight italic">All orders served. Clear kitchen!</p>
+            </div>
+          ) : (
+            activeOrders.map(order => (
+              <div 
+                key={order.id} 
+                className={cn(
+                  "flex flex-col bg-zinc-900 border-2 rounded-3xl overflow-hidden transition-all duration-500",
+                  order.status === 'pending' ? "border-zinc-800" : "border-orange-500/30 shadow-lg shadow-orange-500/5"
+                )}
+              >
+                {/* Order Header */}
+                <div className={cn(
+                  "p-4 flex flex-col gap-1 border-b",
+                  order.status === 'pending' ? "bg-zinc-800/50 border-zinc-800" : "bg-orange-500/5 border-orange-500/20"
+                )}>
+                  <div className="flex justify-between items-start">
+                    <span className="text-2xl font-black text-white">{order.tableName}</span>
+                    <span className="text-xs font-black px-2 py-1 rounded bg-zinc-950 text-zinc-400">
+                      ID: {order.id.slice(-4).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-widest">
+                    <Clock size={12} />
+                    {formatDistanceToNow(new Date(order.createdAt))} ago
+                  </div>
+                </div>
+
+                {/* Items List */}
+                <div className="flex-1 p-4 flex flex-col gap-3">
+                  {order.items.map(item => (
+                    <div key={item.id} className="flex justify-between items-start gap-4">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-lg text-zinc-200 leading-none">
+                          <span className="text-orange-500 mr-2">{item.quantity}×</span>
+                          {item.name}
+                        </span>
+                        {item.notes && (
+                          <span className="text-xs font-medium text-orange-400/80 mt-1 flex items-center gap-1">
+                            <AlertCircle size={10} />
+                            {item.notes}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Actions */}
+                <div className="p-4 bg-zinc-950/50 border-t border-zinc-800">
+                   {order.status === 'pending' ? (
+                     <button 
+                       onClick={() => updateOrderStatus(order.id, 'preparing')}
+                       className="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-orange-500 hover:text-white text-zinc-400 font-bold py-3 rounded-xl transition-all active:scale-95"
+                     >
+                       START PREPARING
+                     </button>
+                   ) : (
+                     <button 
+                       onClick={() => updateOrderStatus(order.id, 'ready')}
+                       className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+                     >
+                       <CheckCircle2 size={20} />
+                       MARK AS READY
+                     </button>
+                   )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default ChefPage;
