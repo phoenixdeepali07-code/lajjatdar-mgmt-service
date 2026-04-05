@@ -20,11 +20,25 @@ const LoginPage: React.FC = () => {
     setError('');
     
     try {
+      // Check if keys are missing
+      if (import.meta.env.VITE_FIREBASE_API_KEY === "missing" || !import.meta.env.VITE_FIREBASE_API_KEY) {
+        throw new Error('Firebase keys are missing. Please check your .env file (for local) or GitHub secrets (for live site).');
+      }
+
       await signInWithEmailAndPassword(auth, email, password);
       navigate(from, { replace: true });
     } catch (err: any) {
-      console.error(err);
-      setError('Invalid email or password. Please try again.');
+      console.error('Login Error:', err);
+      
+      if (err.message?.includes('Firebase keys are missing')) {
+        setError(err.message);
+      } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        setError('Invalid email or password. Please try again.');
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError('Working domain not authorized in Firebase. Add your site URL to "Authorized Domains" in Firebase Authentication.');
+      } else {
+        setError('An error occurred during login. Check the console for details.');
+      }
     } finally {
       setLoading(false);
     }
