@@ -24,9 +24,15 @@ import {
   ShoppingBag,
   ToggleLeft as Toggle,
   RefreshCcw,
-  Minus
+  Minus,
+  X,
+  CreditCard,
+  Wallet,
+  Calendar,
+  IndianRupee,
+  Briefcase
 } from 'lucide-react';
-import { Table, MenuItem, UserRole, StockItem } from '../types';
+import { Table, MenuItem, UserRole, StockItem, Expense } from '../types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { firebaseConfig } from '../firebase';
@@ -35,6 +41,7 @@ import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -46,6 +53,7 @@ const AdminPage: React.FC = () => {
     tables: allTables, 
     orders, 
     stock,
+    expenses,
     users,
     settings,
     seedData, 
@@ -54,6 +62,7 @@ const AdminPage: React.FC = () => {
     addMenuItem, 
     deleteMenuItem,
     updateStockItem,
+    addExpense,
     updateUserRole,
     updateUserStatus,
     deleteUser,
@@ -70,6 +79,7 @@ const AdminPage: React.FC = () => {
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [showAddTable, setShowAddTable] = useState(false);
   const [showAddStaff, setShowAddStaff] = useState(false);
+  const [showAddExpense, setShowAddExpense] = useState(false);
   const [staffLoading, setStaffLoading] = useState(false);
   const [staffError, setStaffError] = useState('');
   
@@ -83,6 +93,12 @@ const AdminPage: React.FC = () => {
     available: true
   });
   const [newStaff, setNewStaff] = useState({ email: '', password: '', role: 'waiter' as UserRole, name: '' });
+  const [newExpense, setNewExpense] = useState<Omit<Expense, 'id'>>({
+    description: '',
+    amount: 0,
+    category: 'Grocery',
+    date: new Date().toISOString()
+  });
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -137,12 +153,25 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const handleHandleAddExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await addExpense(newExpense);
+      setNewExpense({ description: '', amount: 0, category: 'Grocery', date: new Date().toISOString() });
+      setShowAddExpense(false);
+    } catch (err) {
+      console.error("Error adding expense:", err);
+    }
+  };
+
   const handleUpdateStock = (item: StockItem, delta: number) => {
     const newQty = Math.max(0, item.quantity + delta);
     updateStockItem(item.id, { quantity: newQty });
   };
 
   const totalRevenue = orders.filter(o => o.status === 'billed').reduce((acc, o) => acc + o.totalAmount, 0);
+  const totalExpenses = expenses.reduce((acc, e) => acc + e.amount, 0);
+  const netProfit = totalRevenue - totalExpenses;
 
   const lowStockItems = stock.filter(item => item.quantity < (item.minThreshold || 10));
 
@@ -707,7 +736,7 @@ const AdminPage: React.FC = () => {
                     <div key={item.id} className="bg-zinc-900 p-6 rounded-3xl border border-zinc-800 flex flex-col gap-4 group hover:border-orange-500/30 transition-all">
                       <div className="flex justify-between items-start">
                         <h4 className="text-lg font-black text-white">{item.name}</h4>
-                        <span className="text-xs font-black bg-zinc-800 text-zinc-500 px-2 py-1 rounded uppercase">{item.unit === 'kg' ? 'Vegetables' : 'Supplies'}</span>
+                        <span className="text-xs font-black bg-zinc-800 text-zinc-500 px-2 py-1 rounded uppercase">{item.category}</span>
                       </div>
                       <div className="flex items-end justify-between">
                          <div className="flex flex-col">
@@ -746,52 +775,197 @@ const AdminPage: React.FC = () => {
           )}
 
           {activeTab === 'expenses' && (
-             <div className="flex flex-col gap-8">
-               <div className="flex justify-between items-center">
+            <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-3xl font-black text-white italic">Finance & Reporting</h2>
+                  <p className="text-zinc-500 font-medium">Detailed tracking of revenue and expenses</p>
+                </div>
+                <button 
+                  onClick={() => setShowAddExpense(true)}
+                  className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black px-6 py-3 rounded-2xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+                >
+                  <Plus size={20} />
+                  ADD EXPENSE
+                </button>
+              </div>
+
+              {/* Status Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 flex flex-col gap-4 group hover:border-emerald-500/30 transition-all">
+                  <TrendingUp className="text-emerald-500" size={32} />
                   <div>
-                    <h2 className="text-3xl font-black text-white italic">Financial Tally</h2>
-                    <p className="text-zinc-500 font-medium">Compare input vs output expenses</p>
+                    <span className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em]">Live Revenue</span>
+                    <h3 className="text-4xl font-black text-white italic mt-1 tracking-tighter">₹{totalRevenue}</h3>
                   </div>
-                  <button className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black px-6 py-3 rounded-2xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
-                    <Plus size={20} />
-                    ADD EXPENSE
-                  </button>
-               </div>
+                  <p className="text-xs font-bold text-zinc-600 uppercase">Incoming from {orders.filter(o => o.status === 'billed').length} bills</p>
+                </div>
+                <div className="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 flex flex-col gap-4 group hover:border-red-500/30 transition-all">
+                  <CreditCard className="text-red-500" size={32} />
+                  <div>
+                    <span className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em]">Total Expenses</span>
+                    <h3 className="text-4xl font-black text-white italic mt-1 tracking-tighter">₹{totalExpenses}</h3>
+                  </div>
+                  <p className="text-xs font-bold text-zinc-600 uppercase">Outgoing from {expenses.length} records</p>
+                </div>
+                <div className={cn(
+                  "p-8 rounded-3xl border flex flex-col gap-4 transition-all",
+                  netProfit >= 0 ? "bg-emerald-500/5 border-emerald-500/20" : "bg-red-500/5 border-red-500/20"
+                )}>
+                  <div className={cn(
+                    "p-3 w-fit rounded-2xl",
+                    netProfit >= 0 ? "bg-emerald-500 text-white" : "bg-red-500 text-white"
+                  )}>
+                    <Wallet size={24} />
+                  </div>
+                  <div>
+                    <span className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em]">Net Profit</span>
+                    <h3 className={cn(
+                      "text-4xl font-black italic mt-1 tracking-tighter",
+                      netProfit >= 0 ? "text-emerald-500" : "text-red-500"
+                    )}>₹{Math.abs(netProfit)}</h3>
+                  </div>
+                  <p className="text-xs font-bold text-zinc-600 uppercase">{netProfit >= 0 ? "SURPLUS" : "DEFICIT"}</p>
+                </div>
+              </div>
 
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl flex flex-col gap-4">
-                     <span className="text-xs font-black text-zinc-500 uppercase tracking-widest">Revenue (Input)</span>
-                     <h4 className="text-4xl font-black text-emerald-500">₹{totalRevenue}</h4>
-                     <p className="text-sm font-medium text-zinc-500">Total income from billed orders today.</p>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                {/* Billing History */}
+                <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 flex flex-col gap-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-black text-white">Billing History</h3>
+                    <Receipt size={20} className="text-zinc-600" />
                   </div>
-                  <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl flex flex-col gap-4">
-                     <span className="text-xs font-black text-zinc-500 uppercase tracking-widest">Expenses (Output)</span>
-                     <h4 className="text-4xl font-black text-red-500">₹4,200</h4>
-                     <p className="text-sm font-medium text-zinc-500">Total spending on groceries and utilities.</p>
+                  <div className="flex flex-col gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                    {orders.filter(o => o.status === 'billed').length === 0 ? (
+                      <div className="py-20 text-center text-zinc-700 italic font-bold">No bills generated yet.</div>
+                    ) : (
+                      orders.filter(o => o.status === 'billed').map(order => (
+                        <div key={order.id} className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800/50 flex items-center justify-between group hover:border-emerald-500/20 transition-all">
+                          <div className="flex items-center gap-4">
+                            <div className="p-3 bg-zinc-900 rounded-xl text-emerald-500">
+                              <IndianRupee size={20} />
+                            </div>
+                            <div>
+                               <h4 className="font-black text-zinc-200">{order.tableName}</h4>
+                               <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">
+                                 <span>{format(new Date(order.updatedAt), 'MMM d, HH:mm')}</span>
+                                 <span>•</span>
+                                 <span>{order.waiterName}</span>
+                               </div>
+                            </div>
+                          </div>
+                          <span className="text-xl font-black text-white">₹{order.totalAmount}</span>
+                        </div>
+                      ))
+                    )}
                   </div>
-               </div>
+                </div>
 
-               <div className="bg-zinc-900 p-8 rounded-3xl border border-zinc-800">
-                  <div className="flex justify-between items-center mb-6">
-                    <h4 className="text-xl font-black text-white">Net Profit</h4>
-                    <span className="text-2xl font-black text-white">₹{totalRevenue - 4200}</span>
+                {/* Expense Log */}
+                <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 flex flex-col gap-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-black text-white">Expense Log</h3>
+                    <CreditCard size={20} className="text-zinc-600" />
                   </div>
-                  <div className="w-full h-4 bg-zinc-800 rounded-full overflow-hidden flex">
-                     <div className="h-full bg-emerald-500" style={{ width: '70%' }}></div>
-                     <div className="h-full bg-red-500" style={{ width: '30%' }}></div>
+                  <div className="flex flex-col gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                    {expenses.length === 0 ? (
+                      <div className="py-20 text-center text-zinc-700 italic font-bold">No expenses recorded yet.</div>
+                    ) : (
+                      expenses.map(expense => (
+                        <div key={expense.id} className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800/50 flex items-center justify-between group hover:border-red-500/20 transition-all">
+                          <div className="flex items-center gap-4">
+                            <div className={cn(
+                              "p-3 rounded-xl",
+                              expense.category === 'Salary' ? "bg-purple-500/10 text-purple-500" :
+                              expense.category === 'Utility' ? "bg-blue-500/10 text-blue-500" :
+                              "bg-red-500/10 text-red-500"
+                            )}>
+                              {expense.category === 'Salary' ? <Briefcase size={20} /> : <Receipt size={20} />}
+                            </div>
+                            <div>
+                               <h4 className="font-black text-zinc-200">{expense.description}</h4>
+                               <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">
+                                 <span>{format(new Date(expense.date), 'MMM d, HH:mm')}</span>
+                                 <span>•</span>
+                                 <span className="italic">{expense.category}</span>
+                               </div>
+                            </div>
+                          </div>
+                          <span className="text-xl font-black text-white">₹{expense.amount}</span>
+                        </div>
+                      ))
+                    )}
                   </div>
-                  <div className="flex justify-between mt-4 text-xs font-bold">
-                     <div className="flex items-center gap-2 text-emerald-500">
-                        <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-                        Profit (70%)
-                     </div>
-                     <div className="flex items-center gap-2 text-red-500">
-                        <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                        Expenses (30%)
-                     </div>
+                </div>
+              </div>
+
+              {/* Add Expense Modal */}
+              {showAddExpense && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-6 backdrop-blur-md bg-zinc-950/40 animate-in fade-in duration-200">
+                  <div className="bg-zinc-900 w-full max-w-lg rounded-3xl border border-zinc-800 shadow-2xl p-8 flex flex-col gap-6 animate-in zoom-in-95 duration-200">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-2xl font-black text-white italic">Record Expense</h3>
+                      <button 
+                        onClick={() => setShowAddExpense(false)}
+                        className="p-2 hover:bg-zinc-800 rounded-xl text-zinc-500 transition-colors"
+                      >
+                        <X size={24} />
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleHandleAddExpense} className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-2">
+                         <label className="text-xs font-black text-zinc-500 uppercase tracking-widest ml-1">Detail</label>
+                         <input 
+                            type="text" 
+                            placeholder="e.g. Electricity Bill, Staff Salary" 
+                            required
+                            className="bg-zinc-950 border border-zinc-800 p-4 rounded-2xl text-white focus:outline-none focus:border-emerald-500 font-bold"
+                            value={newExpense.description}
+                            onChange={e => setNewExpense({...newExpense, description: e.target.value})}
+                         />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-2">
+                           <label className="text-xs font-black text-zinc-500 uppercase tracking-widest ml-1">Amount (₹)</label>
+                           <input 
+                              type="number" 
+                              placeholder="0.00" 
+                              required
+                              className="bg-zinc-950 border border-zinc-800 p-4 rounded-2xl text-white focus:outline-none focus:border-emerald-500 font-black h-full"
+                              value={newExpense.amount || ''}
+                              onChange={e => setNewExpense({...newExpense, amount: Number(e.target.value)})}
+                           />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                           <label className="text-xs font-black text-zinc-500 uppercase tracking-widest ml-1">Category</label>
+                           <select 
+                              className="bg-zinc-950 border border-zinc-800 p-4 rounded-2xl text-white focus:outline-none focus:border-emerald-500 font-black uppercase text-xs h-full"
+                              value={newExpense.category}
+                              onChange={e => setNewExpense({...newExpense, category: e.target.value as any})}
+                           >
+                             <option value="Grocery">Grocery</option>
+                             <option value="Utility">Utility</option>
+                             <option value="Salary">Salary</option>
+                             <option value="Maintenance">Maintenance</option>
+                             <option value="Other">Other</option>
+                           </select>
+                        </div>
+                      </div>
+
+                      <button 
+                        type="submit"
+                        className="bg-emerald-500 hover:bg-emerald-600 text-white font-black py-5 rounded-2xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95 mt-4"
+                      >
+                        RECORD TRANSACTION
+                      </button>
+                    </form>
                   </div>
-               </div>
-             </div>
+                </div>
+              )}
+            </div>
           )}
         </main>
       </div>

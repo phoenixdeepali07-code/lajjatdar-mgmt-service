@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useAuth } from '../components/AuthGuard';
-import { ChefHat, Clock, CheckCircle2, AlertCircle, LogOut, LayoutDashboard } from 'lucide-react';
+import { ChefHat, Clock, CheckCircle2, AlertCircle, LogOut, LayoutDashboard, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -15,11 +15,23 @@ const ChefPage: React.FC = () => {
   const { orders, updateOrderStatus } = useStore();
   const { profile, logout } = useAuth();
   const navigate = useNavigate();
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'preparing');
   const readyOrders = orders.filter(o => o.status === 'ready');
 
   const chefName = profile?.name || profile?.email?.split('@')[0] || "Chef";
+
+  const handleStatusUpdate = async (orderId: string, status: 'preparing' | 'ready') => {
+    setUpdatingId(orderId);
+    try {
+      await updateOrderStatus(orderId, status);
+    } catch (err) {
+      console.error("Chef error updating status:", err);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-950 animate-in fade-in duration-500">
@@ -109,8 +121,8 @@ const ChefPage: React.FC = () => {
 
                 {/* Items List */}
                 <div className="flex-1 p-4 flex flex-col gap-3">
-                  {order.items.map(item => (
-                    <div key={item.id} className="flex justify-between items-start gap-4">
+                  {order.items.map((item, idx) => (
+                    <div key={idx} className="flex justify-between items-start gap-4">
                       <div className="flex flex-col">
                         <span className="font-bold text-lg text-zinc-200 leading-none">
                           <span className="text-orange-500 mr-2">{item.quantity}×</span>
@@ -131,24 +143,30 @@ const ChefPage: React.FC = () => {
                 <div className="p-4 bg-zinc-950/50 border-t border-zinc-800">
                    {order.status === 'pending' ? (
                      <button 
-                       onClick={() => {
-                         console.log("Chef: Starting preparation for order:", order.id);
-                         updateOrderStatus(order.id, 'preparing');
-                       }}
-                       className="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-orange-500 hover:text-white text-zinc-400 font-bold py-3 rounded-xl transition-all active:scale-95"
+                       disabled={updatingId === order.id}
+                       onClick={() => handleStatusUpdate(order.id, 'preparing')}
+                       className="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-orange-500 hover:text-white disabled:opacity-50 text-zinc-400 font-bold py-3 rounded-xl transition-all active:scale-95"
                      >
-                       START PREPARING
+                       {updatingId === order.id ? (
+                         <Loader2 size={20} className="animate-spin" />
+                       ) : (
+                         "START PREPARING"
+                       )}
                      </button>
                    ) : (
                      <button 
-                       onClick={() => {
-                         console.log("Chef: Marking order as ready:", order.id);
-                         updateOrderStatus(order.id, 'ready');
-                       }}
-                       className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+                       disabled={updatingId === order.id}
+                       onClick={() => handleStatusUpdate(order.id, 'ready')}
+                       className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
                      >
-                       <CheckCircle2 size={20} />
-                       MARK AS READY
+                       {updatingId === order.id ? (
+                         <Loader2 size={20} className="animate-spin" />
+                       ) : (
+                         <>
+                           <CheckCircle2 size={20} />
+                           MARK AS READY
+                         </>
+                       )}
                      </button>
                    )}
                 </div>

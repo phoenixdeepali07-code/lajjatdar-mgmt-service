@@ -21,6 +21,7 @@ export function useStore() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [stock, setStock] = useState<StockItem[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [settings, setSettings] = useState<GlobalSettings>({ waiterStationEnabled: true });
   const [loading, setLoading] = useState(true);
@@ -38,7 +39,7 @@ export function useStore() {
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'menuItems'), (snapshot) => {
       const menuData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem));
-      setMenuItems(menuData);
+      setMenuItems(menuData.filter(i => !i.deleted));
     });
     return unsubscribe;
   }, []);
@@ -59,6 +60,16 @@ export function useStore() {
     const unsubscribe = onSnapshot(collection(db, 'stock'), (snapshot) => {
       const stockData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StockItem));
       setStock(stockData);
+    });
+    return unsubscribe;
+  }, []);
+
+  // Real-time sync for Expenses
+  useEffect(() => {
+    const q = query(collection(db, 'expenses'), orderBy('date', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const expensesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense));
+      setExpenses(expensesData);
     });
     return unsubscribe;
   }, []);
@@ -87,10 +98,7 @@ export function useStore() {
 
   const addOrder = useCallback(async (order: Order) => {
     try {
-      // 1. Add the order to Firestore
       await addDoc(collection(db, 'orders'), order);
-      
-      // 2. Update the table status
       const tableRef = doc(db, 'tables', order.tableId);
       await updateDoc(tableRef, {
         status: 'occupied',
@@ -98,20 +106,20 @@ export function useStore() {
       });
     } catch (error) {
       console.error("Error adding order: ", error);
+      throw error;
     }
   }, []);
 
   const updateOrderStatus = useCallback(async (orderId: string, status: OrderStatus) => {
-    console.log(`Updating order ${orderId} to status: ${status}`);
+    console.log(`Requesting order ${orderId} update to ${status}`);
     try {
       const orderRef = doc(db, 'orders', orderId);
       await updateDoc(orderRef, {
         status,
         updatedAt: new Date().toISOString()
       });
-      console.log(`Successfully updated order ${orderId}`);
+      console.log(`Successfully updated order ${orderId} to ${status}`);
 
-      // If billed, free the table
       if (status === 'billed') {
         const order = orders.find(o => o.id === orderId);
         if (order) {
@@ -122,10 +130,24 @@ export function useStore() {
           });
         }
       }
-    } catch (error) {
-      console.error(`Error updating order status for ${orderId}: `, error);
+    } catch (error: any) {
+      console.error(`CRITICAL: Failed to update order status for ${orderId}: `, error);
+      // Give more info for 403 errors
+      if (error.code === 'permission-denied') {
+        alert("Permission Denied: Ensure Firestore rules allow writes for authenticated users.");
+      }
+      throw error;
     }
   }, [orders]);
+
+  const addExpense = useCallback(async (expense: Omit<Expense, 'id'>) => {
+    try {
+      await addDoc(collection(db, 'expenses'), expense);
+    } catch (error) {
+      console.error("Error adding expense: ", error);
+      throw error;
+    }
+  }, []);
 
   const addTable = useCallback(async (table: Omit<Table, 'id'>) => {
     try {
@@ -140,17 +162,16 @@ export function useStore() {
       const tableRef = doc(db, 'tables', tableId);
       await updateDoc(tableRef, data);
     } catch (error) {
-      console.error("Error updating table: ", error);
+       console.error("Error updating table: ", error);
     }
   }, []);
 
   const deleteTable = useCallback(async (tableId: string) => {
     try {
       const tableRef = doc(db, 'tables', tableId);
-      await updateDoc(tableRef, { deleted: true }); // Soft delete
-      // Or hard delete: await deleteDoc(tableRef);
+      await updateDoc(tableRef, { deleted: true });
     } catch (error) {
-      console.error("Error deleting table: ", error);
+       console.error("Error deleting table: ", error);
     }
   }, []);
 
@@ -158,7 +179,7 @@ export function useStore() {
     try {
       await addDoc(collection(db, 'menuItems'), item);
     } catch (error) {
-      console.error("Error adding menu item: ", error);
+       console.error("Error adding menu item: ", error);
     }
   }, []);
 
@@ -167,7 +188,7 @@ export function useStore() {
       const itemRef = doc(db, 'menuItems', itemId);
       await updateDoc(itemRef, data);
     } catch (error) {
-      console.error("Error updating menu item: ", error);
+       console.error("Error updating menu item: ", error);
     }
   }, []);
 
@@ -176,7 +197,7 @@ export function useStore() {
       const itemRef = doc(db, 'menuItems', itemId);
       await updateDoc(itemRef, { deleted: true });
     } catch (error) {
-      console.error("Error deleting menu item: ", error);
+       console.error("Error deleting menu item: ", error);
     }
   }, []);
 
@@ -194,7 +215,7 @@ export function useStore() {
       const userRef = doc(db, 'users', uid);
       await updateDoc(userRef, { role });
     } catch (error) {
-      console.error("Error updating user role: ", error);
+       console.error("Error updating user role: ", error);
     }
   }, []);
 
@@ -203,7 +224,7 @@ export function useStore() {
       const userRef = doc(db, 'users', uid);
       await deleteDoc(userRef);
     } catch (error) {
-      console.error("Error deleting user role: ", error);
+       console.error("Error deleting user: ", error);
     }
   }, []);
 
@@ -212,7 +233,7 @@ export function useStore() {
       const userRef = doc(db, 'users', uid);
       await updateDoc(userRef, { status });
     } catch (error) {
-      console.error("Error updating user status: ", error);
+       console.error("Error updating user status: ", error);
     }
   }, []);
 
@@ -221,32 +242,25 @@ export function useStore() {
       const settingsRef = doc(db, 'settings', 'global');
       await updateDoc(settingsRef, newSettings);
     } catch (error) {
-      console.error("Error updating global settings: ", error);
+       console.error("Error updating global settings: ", error);
     }
   }, []);
 
   const seedData = async () => {
     try {
       const batch = writeBatch(db);
-      
-      // Seed Tables
       mockTables.forEach(table => {
         const ref = doc(db, 'tables', table.id);
         batch.set(ref, table);
       });
-
-      // Seed Menu
       mockMenuItems.forEach(item => {
         const ref = doc(db, 'menuItems', item.id);
         batch.set(ref, item);
       });
-
-      // Seed Stock
       mockStock.forEach(item => {
         const ref = doc(db, 'stock', item.id);
         batch.set(ref, item);
       });
-
       await batch.commit();
       console.log("Database seeded successfully!");
     } catch (error) {
@@ -259,11 +273,13 @@ export function useStore() {
     menuItems,
     orders,
     stock,
+    expenses,
     users,
     settings,
     loading,
     addOrder,
     updateOrderStatus,
+    addExpense,
     addTable,
     updateTable,
     deleteTable,
