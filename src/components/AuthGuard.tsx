@@ -36,29 +36,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      if (user) {
-        const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-        
-        if (userSnap.exists()) {
-          setProfile({ uid: user.uid, email: user.email!, ...userSnap.data() } as UserProfile);
-        } else {
-          // Auto-create default profile if it doesn't exist
-          const newProfile: Omit<UserProfile, 'uid'> = {
-            email: user.email!,
-            name: user.displayName || user.email?.split('@')[0] || 'Staff Member',
-            role: 'waiter', // Default role
-            status: 'active'
-          };
+      try {
+        setUser(user);
+        if (user) {
+          const userRef = doc(db, 'users', user.uid);
+          const userSnap = await getDoc(userRef);
           
-          await setDoc(userRef, newProfile);
-          setProfile({ uid: user.uid, ...newProfile } as UserProfile);
+          if (userSnap.exists()) {
+            setProfile({ uid: user.uid, email: user.email!, ...userSnap.data() } as UserProfile);
+          } else {
+            // Auto-create default profile if it doesn't exist
+            const newProfile: Omit<UserProfile, 'uid'> = {
+              email: user.email!,
+              name: user.displayName || user.email?.split('@')[0] || 'Staff Member',
+              role: 'waiter', // Default role
+              status: 'active'
+            };
+            
+            await setDoc(userRef, newProfile);
+            setProfile({ uid: user.uid, ...newProfile } as UserProfile);
+          }
+        } else {
+          setProfile(null);
         }
-      } else {
-        setProfile(null);
+      } catch (error) {
+        console.error("AuthGuard initialization error:", error);
+        // Fallback to basic auth even if Firestore fails
+        if (user) {
+          setProfile({ 
+            uid: user.uid, 
+            email: user.email!, 
+            role: 'waiter', 
+            status: 'active',
+            name: user.displayName || 'Staff'
+          } as UserProfile);
+        }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
     return unsubscribe;
   }, []);

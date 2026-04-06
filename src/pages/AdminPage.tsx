@@ -29,7 +29,7 @@ import { Table, MenuItem, UserRole } from '../types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { firebaseConfig } from '../firebase';
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -104,7 +104,8 @@ const AdminPage: React.FC = () => {
 
     try {
       // Initialize a secondary app to create user without signing out the admin
-      const secondaryApp = initializeApp(firebaseConfig, "Secondary");
+      const secondaryApp = getApps().find(app => app.name === "Secondary") 
+        || initializeApp(firebaseConfig, "Secondary");
       const secondaryAuth = getAuth(secondaryApp);
       
       const userCredential = await createUserWithEmailAndPassword(secondaryAuth, newStaff.email, newStaff.password);
