@@ -29,31 +29,41 @@ const LoginPage: React.FC = () => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Fetch role immediately to decide where to go
-      const userRef = doc(db, 'users', user.uid);
-      const userSnap = await getDoc(userRef);
+      try {
+        // Fetch role immediately to decide where to go
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
 
-      if (userSnap.exists()) {
-        const role = userSnap.data().role;
-        
-        // If they were trying to go somewhere specific, let them (AuthGuard will double check)
-        if (from) {
-          navigate(from, { replace: true });
+        if (userSnap.exists()) {
+          const role = userSnap.data().role;
+          
+          // If they were trying to go somewhere specific, let them (AuthGuard will double check)
+          if (from) {
+            navigate(from, { replace: true });
+          } else {
+            // Default redirects
+            if (role === 'admin') navigate('/admin', { replace: true });
+            else if (role === 'chef') navigate('/chef', { replace: true });
+            else navigate('/waiter', { replace: true });
+          }
         } else {
-          // Default redirects
-          if (role === 'admin') navigate('/admin', { replace: true });
-          else if (role === 'chef') navigate('/chef', { replace: true });
-          else navigate('/waiter', { replace: true });
+          // Logged in but no profile - redirect to waiter as fallback
+          navigate('/waiter', { replace: true });
         }
-      } else {
-        // Logged in but no profile - redirect to waiter as fallback or show error
+      } catch (firestoreErr: any) {
+        console.warn('Firestore role check failed (possibly API disabled):', firestoreErr);
+        // If Firestore fails, still login but go to default station
         navigate('/waiter', { replace: true });
       }
     } catch (err: any) {
       console.error('Login Error:', err);
       
-      if (err.message?.includes('Firebase keys are missing')) {
+      const errorMessage = err.message || '';
+      
+      if (errorMessage.includes('Firebase keys are missing')) {
         setError(err.message);
+      } else if (errorMessage.includes('Cloud Firestore API has not been used') || errorMessage.includes('firestore.googleapis.com')) {
+        setError('Cloud Firestore API is not enabled for this project. Please enable it in the Google Cloud Console.');
       } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
         setError('Invalid email or password. Please try again.');
       } else if (err.code === 'auth/unauthorized-domain') {
