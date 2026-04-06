@@ -3,7 +3,7 @@ import WaiterPage from './pages/WaiterPage';
 import ChefPage from './pages/ChefPage';
 import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
-import { AuthProvider, RequireAuth } from './components/AuthGuard';
+import { AuthProvider, RequireAuth, RequireRole } from './components/AuthGuard';
 
 function App() {
   return (
@@ -15,21 +15,21 @@ function App() {
             <Route path="/" element={<Navigate to="/waiter" replace />} />
             
             <Route path="/waiter" element={
-              <RequireAuth>
+              <RequireRole role="waiter">
                 <WaiterPage />
-              </RequireAuth>
+              </RequireRole>
             } />
             
             <Route path="/chef" element={
-              <RequireAuth>
+              <RequireRole role="chef">
                 <ChefPage />
-              </RequireAuth>
+              </RequireRole>
             } />
             
             <Route path="/admin" element={
-              <RequireAuth>
+              <RequireRole role="admin">
                 <AdminPage />
-              </RequireAuth>
+              </RequireRole>
             } />
           </Routes>
         </div>

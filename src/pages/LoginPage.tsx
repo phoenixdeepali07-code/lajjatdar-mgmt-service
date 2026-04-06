@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LogIn, Lock, Mail, ChefHat, AlertCircle } from 'lucide-react';
 
@@ -12,7 +13,7 @@ const LoginPage: React.FC = () => {
   
   const navigate = useNavigate();
   const location = useLocation();
-  const from = location.state?.from?.pathname || '/waiter';
+  const from = location.state?.from?.pathname;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,8 +26,29 @@ const LoginPage: React.FC = () => {
         throw new Error('Firebase keys are missing. Please check your .env file (for local) or GitHub secrets (for live site).');
       }
 
-      await signInWithEmailAndPassword(auth, email, password);
-      navigate(from, { replace: true });
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Fetch role immediately to decide where to go
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists()) {
+        const role = userSnap.data().role;
+        
+        // If they were trying to go somewhere specific, let them (AuthGuard will double check)
+        if (from) {
+          navigate(from, { replace: true });
+        } else {
+          // Default redirects
+          if (role === 'admin') navigate('/admin', { replace: true });
+          else if (role === 'chef') navigate('/chef', { replace: true });
+          else navigate('/waiter', { replace: true });
+        }
+      } else {
+        // Logged in but no profile - redirect to waiter as fallback or show error
+        navigate('/waiter', { replace: true });
+      }
     } catch (err: any) {
       console.error('Login Error:', err);
       
