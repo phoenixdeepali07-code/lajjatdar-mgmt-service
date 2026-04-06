@@ -73,6 +73,7 @@ export interface UserProfile {
   email: string;
   role: UserRole;
   name?: string;
+  status?: 'active' | 'inactive';
 }
 
 export interface GlobalSettings {

@@ -186,6 +186,15 @@ export function useStore() {
     }
   }, []);
 
+  const updateUserStatus = useCallback(async (uid: string, status: 'active' | 'inactive') => {
+    try {
+      const userRef = doc(db, 'users', uid);
+      await updateDoc(userRef, { status });
+    } catch (error) {
+      console.error("Error updating user status: ", error);
+    }
+  }, []);
+
   const updateGlobalSettings = useCallback(async (newSettings: Partial<GlobalSettings>) => {
     try {
       const settingsRef = doc(db, 'settings', 'global');
@@ -240,6 +249,7 @@ export function useStore() {
     updateMenuItem,
     deleteMenuItem,
     updateUserRole,
+    updateUserStatus,
     deleteUser,
     updateGlobalSettings,
     seedData

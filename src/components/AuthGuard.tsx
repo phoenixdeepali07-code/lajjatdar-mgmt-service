@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { Navigate, useLocation } from 'react-router-dom';
 import { UserProfile, UserRole } from '../types';
@@ -38,14 +38,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user) {
-        // Fetch user profile from Firestore
         const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef);
         
         if (userSnap.exists()) {
           setProfile({ uid: user.uid, email: user.email!, ...userSnap.data() } as UserProfile);
         } else {
-          setProfile(null);
+          // Auto-create default profile if it doesn't exist
+          const newProfile: Omit<UserProfile, 'uid'> = {
+            email: user.email!,
+            name: user.displayName || user.email?.split('@')[0] || 'Staff Member',
+            role: 'waiter', // Default role
+            status: 'active'
+          };
+          
+          await setDoc(userRef, newProfile);
+          setProfile({ uid: user.uid, ...newProfile } as UserProfile);
         }
       } else {
         setProfile(null);

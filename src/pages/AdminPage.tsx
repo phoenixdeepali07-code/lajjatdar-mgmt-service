@@ -21,7 +21,9 @@ import {
   Users,
   LogOut,
   ChefHat,
-  ShoppingBag
+  ShoppingBag,
+  ToggleLeft as Toggle,
+  RefreshCcw
 } from 'lucide-react';
 import { Table, MenuItem, UserRole } from '../types';
 import { clsx, type ClassValue } from 'clsx';
@@ -50,11 +52,12 @@ const AdminPage: React.FC = () => {
     addMenuItem, 
     deleteMenuItem,
     updateUserRole,
+    updateUserStatus,
     deleteUser,
     updateGlobalSettings
   } = useStore();
 
-  const { logout } = useAuth();
+  const { profile, logout } = useAuth();
   const navigate = useNavigate();
 
   const tables = allTables.filter(t => !t.deleted);
@@ -112,6 +115,7 @@ const AdminPage: React.FC = () => {
         email: newStaff.email,
         role: newStaff.role,
         name: newStaff.name,
+        status: 'active',
         createdAt: new Date().toISOString()
       });
 
@@ -136,7 +140,7 @@ const AdminPage: React.FC = () => {
       <div className="flex flex-col lg:flex-row min-h-screen">
         <aside className="w-full lg:w-64 bg-zinc-900 border-r border-zinc-800 p-6 flex flex-col gap-8">
           <div>
-            <h1 className="text-xl font-black text-white tracking-tighter">ADMIN PANEL</h1>
+            <h1 className="text-xl font-black text-white tracking-tighter">LAJJATDAR</h1>
             <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mt-1">Management Suite</p>
           </div>
 
@@ -161,17 +165,17 @@ const AdminPage: React.FC = () => {
             </nav>
 
             <nav className="flex flex-col gap-2">
-              <span className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] ml-4 mb-2">Stations</span>
+              <span className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] ml-4 mb-2">Live Stations</span>
               <button
                 onClick={() => navigate('/waiter')}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-zinc-500 hover:bg-zinc-800 hover:text-orange-500 transition-all"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-zinc-500 hover:bg-zinc-800 hover:text-orange-500 transition-all border border-transparent hover:border-orange-500/20"
               >
                 <ShoppingBag size={20} />
                 Waiter View
               </button>
               <button
                 onClick={() => navigate('/chef')}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-zinc-500 hover:bg-zinc-800 hover:text-emerald-500 transition-all"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-zinc-500 hover:bg-zinc-800 hover:text-emerald-500 transition-all border border-transparent hover:border-emerald-500/20"
               >
                 <ChefHat size={20} />
                 Chef View
@@ -182,22 +186,23 @@ const AdminPage: React.FC = () => {
           <div className="mt-auto flex flex-col gap-4">
             <button
               onClick={logout}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-red-500 hover:bg-red-500/10 transition-all"
+              className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-red-500 hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/20"
             >
               <LogOut size={20} />
               Sign Out
             </button>
-            <div className="p-4 bg-zinc-800/50 rounded-2xl border border-zinc-700/50">
-              <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">System Status</span>
-              <div className="flex items-center gap-2 mt-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                <span className="text-sm font-black text-zinc-300 uppercase">Online</span>
-              </div>
+            <div className="p-4 bg-zinc-800/30 rounded-2xl border border-zinc-800">
+               <div className="flex items-center justify-between mb-2">
+                 <span className="text-[10px] font-black text-zinc-500 uppercase">Logged in as</span>
+                 <div className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 text-[8px] font-black uppercase">{profile?.role}</div>
+               </div>
+               <span className="text-sm font-black text-white block truncate">{profile?.name}</span>
+               <span className="text-[10px] font-medium text-zinc-500 truncate block">{profile?.email}</span>
             </div>
           </div>
         </aside>
 
-        <main className="flex-1 p-8 overflow-y-auto">
+        <main className="flex-1 p-8 overflow-y-auto custom-scrollbar">
           {activeTab === 'overview' && (
             <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex justify-between items-end">
@@ -208,9 +213,10 @@ const AdminPage: React.FC = () => {
                 <div className="flex gap-4">
                   <button 
                     onClick={handleSeed}
-                    className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-bold px-4 py-2 rounded-xl text-sm transition-all border border-zinc-700/50"
+                    className="bg-zinc-800/50 hover:bg-zinc-800 text-zinc-400 font-bold px-4 py-2 rounded-xl text-sm transition-all border border-zinc-700/50 flex items-center gap-2"
                   >
-                    SEED INITIAL DATA
+                    <RefreshCcw size={14} />
+                    SEED DATA
                   </button>
                   <div className="bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-xl text-sm font-bold text-zinc-400">
                     Last 24 Hours
@@ -234,9 +240,9 @@ const AdminPage: React.FC = () => {
                       {settings.waiterStationEnabled ? <Unlock size={24} /> : <Lock size={24} />}
                     </div>
                     <div>
-                      <h4 className="font-black text-white">Waiter Station Access</h4>
+                      <h4 className="font-black text-white">Global Waiter Access</h4>
                       <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
-                        {settings.waiterStationEnabled ? "OPEN FOR SERVICE" : "STATION DISABLED"}
+                        {settings.waiterStationEnabled ? "STATION OPEN" : "STATION CLOSED"}
                       </p>
                     </div>
                   </div>
@@ -250,7 +256,7 @@ const AdminPage: React.FC = () => {
                     )}
                   >
                     <Power size={16} />
-                    {settings.waiterStationEnabled ? "DISABLE" : "ENABLE"}
+                    {settings.waiterStationEnabled ? "SHUT DOWN" : "OPEN UP"}
                   </button>
                 </div>
               </div>
@@ -279,7 +285,7 @@ const AdminPage: React.FC = () => {
               </div>
 
               <div className="bg-zinc-900 rounded-3xl border border-zinc-800 p-8">
-                <h3 className="text-xl font-black text-white mb-6">Recent Transactions</h3>
+                <h3 className="text-xl font-black text-white mb-6">Recent Activity</h3>
                 <div className="overflow-x-auto">
                    <table className="w-full text-left">
                      <thead>
@@ -293,7 +299,7 @@ const AdminPage: React.FC = () => {
                      </thead>
                      <tbody className="text-sm font-medium">
                        {orders.length === 0 ? (
-                         <tr><td colSpan={5} className="py-8 text-center text-zinc-700 italic">No transactions found</td></tr>
+                         <tr><td colSpan={5} className="py-8 text-center text-zinc-700 italic">No activity recorded</td></tr>
                        ) : (
                          orders.slice(0, 5).map(order => (
                            <tr key={order.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
@@ -379,31 +385,35 @@ const AdminPage: React.FC = () => {
               )}
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {menuItems.filter(i => !i.deleted).map(item => (
-                  <div key={item.id} className="bg-zinc-900 p-6 rounded-3xl border border-zinc-800 flex items-center justify-between group hover:border-blue-500/30 transition-all">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-zinc-800 flex items-center justify-center text-zinc-500 font-black">
-                        {item.name[0]}
+                {menuItems.length === 0 ? (
+                  <div className="col-span-full py-12 text-center text-zinc-600 font-bold italic">No menu items found. Seed data to start!</div>
+                ) : (
+                  menuItems.map(item => (
+                    <div key={item.id} className="bg-zinc-900 p-6 rounded-3xl border border-zinc-800 flex items-center justify-between group hover:border-blue-500/30 transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-zinc-800 flex items-center justify-center text-zinc-500 font-black">
+                          {item.name[0]}
+                        </div>
+                        <div>
+                          <h4 className="font-black text-zinc-100">{item.name}</h4>
+                          <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{item.category}</span>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-black text-zinc-100">{item.name}</h4>
-                        <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{item.category}</span>
+                      <div className="flex items-center gap-6">
+                        <span className="text-xl font-black text-white">₹{item.price}</span>
+                        <div className="flex gap-2">
+                          <button className="p-2 rounded-lg bg-zinc-800 text-zinc-400 hover:text-blue-500 transition-colors"><Edit3 size={18} /></button>
+                          <button 
+                            onClick={() => deleteMenuItem(item.id)}
+                            className="p-2 rounded-lg bg-zinc-800 text-zinc-400 hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-6">
-                      <span className="text-xl font-black text-white">₹{item.price}</span>
-                      <div className="flex gap-2">
-                         <button className="p-2 rounded-lg bg-zinc-800 text-zinc-400 hover:text-blue-500 transition-colors"><Edit3 size={18} /></button>
-                         <button 
-                           onClick={() => deleteMenuItem(item.id)}
-                           className="p-2 rounded-lg bg-zinc-800 text-zinc-400 hover:text-red-500 transition-colors"
-                         >
-                           <Trash2 size={18} />
-                         </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -457,37 +467,41 @@ const AdminPage: React.FC = () => {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {tables.filter(t => !t.deleted).map(table => (
-                  <div key={table.id} className="bg-zinc-900 p-6 rounded-3xl border border-zinc-800 flex flex-col gap-4 group hover:border-emerald-500/30 transition-all">
-                    <div className="flex justify-between items-start">
-                      <div className="p-3 bg-zinc-800 rounded-2xl text-zinc-400 group-hover:text-emerald-500 transition-colors">
-                        <Grid3X3 size={24} />
+                {tables.length === 0 ? (
+                  <div className="col-span-full py-12 text-center text-zinc-600 font-bold italic">No tables defined. Seed initial data to begin.</div>
+                ) : (
+                  tables.map(table => (
+                    <div key={table.id} className="bg-zinc-900 p-6 rounded-3xl border border-zinc-800 flex flex-col gap-4 group hover:border-emerald-500/30 transition-all">
+                      <div className="flex justify-between items-start">
+                        <div className="p-3 bg-zinc-800 rounded-2xl text-zinc-400 group-hover:text-emerald-500 transition-colors">
+                          <Grid3X3 size={24} />
+                        </div>
+                        <button 
+                          onClick={() => deleteTable(table.id)}
+                          className="p-2 text-zinc-600 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 size={20} />
+                        </button>
                       </div>
-                      <button 
-                        onClick={() => deleteTable(table.id)}
-                        className="p-2 text-zinc-600 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 size={20} />
-                      </button>
-                    </div>
-                    <div>
-                      <h4 className="text-xl font-black text-white">{table.name}</h4>
-                      <div className="flex items-center gap-2 mt-1">
-                        <UserPlus size={14} className="text-zinc-500" />
-                        <span className="text-sm font-bold text-zinc-500">{table.capacity} Seats</span>
+                      <div>
+                        <h4 className="text-xl font-black text-white">{table.name}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <UserPlus size={14} className="text-zinc-500" />
+                          <span className="text-sm font-bold text-zinc-500">{table.capacity} Seats</span>
+                        </div>
+                      </div>
+                      <div className="mt-2 pt-4 border-t border-zinc-800 flex justify-between items-center">
+                        <span className={cn(
+                          "px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest",
+                          table.status === 'free' ? "bg-emerald-500/10 text-emerald-500" : "bg-orange-500/10 text-orange-500"
+                        )}>
+                          {table.status}
+                        </span>
+                        <button className="text-xs font-bold text-zinc-500 hover:text-white transition-colors">EDIT DETAILS</button>
                       </div>
                     </div>
-                    <div className="mt-2 pt-4 border-t border-zinc-800 flex justify-between items-center">
-                       <span className={cn(
-                         "px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest",
-                         table.status === 'free' ? "bg-emerald-500/10 text-emerald-500" : "bg-orange-500/10 text-orange-500"
-                       )}>
-                         {table.status}
-                       </span>
-                       <button className="text-xs font-bold text-zinc-500 hover:text-white transition-colors">EDIT DETAILS</button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -497,7 +511,7 @@ const AdminPage: React.FC = () => {
                <div className="flex justify-between items-center">
                 <div>
                   <h2 className="text-3xl font-black text-white italic">Staff Management</h2>
-                  <p className="text-zinc-500 font-medium">Manage user accounts and access levels</p>
+                  <p className="text-zinc-500 font-medium">Manage user accounts and shift statuses</p>
                 </div>
                 <button 
                   onClick={() => setShowAddStaff(!showAddStaff)}
@@ -527,7 +541,7 @@ const AdminPage: React.FC = () => {
                       type="text" 
                       placeholder="Full Name" 
                       required
-                      className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500"
+                      className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 font-bold"
                       value={newStaff.name}
                       onChange={e => setNewStaff({...newStaff, name: e.target.value})}
                     />
@@ -535,7 +549,7 @@ const AdminPage: React.FC = () => {
                       type="email" 
                       placeholder="Email Address" 
                       required
-                      className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500"
+                      className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 font-bold"
                       value={newStaff.email}
                       onChange={e => setNewStaff({...newStaff, email: e.target.value})}
                     />
@@ -544,12 +558,12 @@ const AdminPage: React.FC = () => {
                       placeholder="Initial Password" 
                       required
                       minLength={6}
-                      className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500"
+                      className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 font-bold"
                       value={newStaff.password}
                       onChange={e => setNewStaff({...newStaff, password: e.target.value})}
                     />
                     <select 
-                      className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500"
+                      className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 font-black uppercase text-xs"
                       value={newStaff.role}
                       onChange={e => setNewStaff({...newStaff, role: e.target.value as UserRole})}
                     >
@@ -578,46 +592,77 @@ const AdminPage: React.FC = () => {
                 </form>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {users.map(user => (
-                  <div key={user.uid} className="bg-zinc-900 p-6 rounded-3xl border border-zinc-800 flex items-center justify-between group hover:border-blue-500/30 transition-all">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-zinc-800 flex items-center justify-center text-zinc-500 font-black">
-                        {user.name ? user.name[0] : (user.email ? user.email[0] : '?')}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                {users.length === 0 ? (
+                  <div className="col-span-full py-12 text-center text-zinc-600 font-bold italic">No staff profiles found. Wait for sync or add new!</div>
+                ) : (
+                  users.map(user => (
+                    <div key={user.uid} className="bg-zinc-900 p-6 rounded-3xl border border-zinc-800 flex items-center justify-between group hover:border-blue-500/30 transition-all">
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className="w-12 h-12 rounded-2xl bg-zinc-800 flex items-center justify-center text-zinc-500 font-black relative overflow-hidden">
+                           {user.name ? user.name[0] : (user.email ? user.email[0] : '?')}
+                           {user.status === 'inactive' && (
+                             <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center backdrop-blur-[1px]">
+                               <Power size={14} className="text-red-500" />
+                             </div>
+                           )}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <h4 className={cn(
+                            "font-black truncate transition-colors",
+                            user.status === 'inactive' ? "text-zinc-600 line-through" : "text-zinc-100"
+                          )}>
+                            {user.name || 'Unnamed User'}
+                          </h4>
+                          <span className="text-[10px] font-bold text-zinc-500 truncate">{user.email}</span>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-black text-zinc-100">{user.name || 'Unnamed User'}</h4>
-                        <span className="text-xs font-bold text-zinc-500 block">{user.email}</span>
+                      
+                      <div className="flex items-center gap-3">
+                        {/* Shift Toggle */}
+                        <button 
+                          onClick={() => updateUserStatus(user.uid, user.status === 'inactive' ? 'active' : 'inactive')}
+                          className={cn(
+                            "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border",
+                            user.status === 'inactive' 
+                              ? "bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500/20" 
+                              : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20"
+                          )}
+                          title={user.status === 'inactive' ? "Enable Shift" : "Disable Shift"}
+                        >
+                          <Power size={12} />
+                          {user.status === 'inactive' ? "Inactive" : "Active"}
+                        </button>
+
+                        <select 
+                          className={cn(
+                            "bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1.5 text-[10px] font-black uppercase tracking-widest focus:outline-none transition-all cursor-pointer",
+                            user.role === 'admin' ? "text-purple-500 border-purple-500/20" : 
+                            user.role === 'chef' ? "text-blue-500 border-blue-500/20" : 
+                            "text-orange-500 border-orange-500/20"
+                          )}
+                          value={user.role}
+                          onChange={(e) => updateUserRole(user.uid, e.target.value as UserRole)}
+                        >
+                          <option value="waiter">Waiter</option>
+                          <option value="chef">Chef</option>
+                          <option value="admin">Admin</option>
+                        </select>
+
+                        <button 
+                          onClick={() => {
+                            if (window.confirm(`Revoke all access for ${user.email}? This will remove their record from Firestore.`)) {
+                              deleteUser(user.uid);
+                            }
+                          }}
+                          className="p-2.5 rounded-lg bg-zinc-800 text-zinc-600 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <select 
-                        className={cn(
-                          "bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1 text-[10px] font-black uppercase tracking-widest focus:outline-none transition-all",
-                          user.role === 'admin' ? "text-purple-500 border-purple-500/20" : 
-                          user.role === 'chef' ? "text-emerald-500 border-emerald-500/20" : 
-                          "text-orange-500 border-orange-500/20"
-                        )}
-                        value={user.role}
-                        onChange={(e) => updateUserRole(user.uid, e.target.value as UserRole)}
-                      >
-                        <option value="waiter">Waiter</option>
-                        <option value="chef">Chef</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                      <button 
-                        onClick={() => {
-                          if (window.confirm(`Revoke all access for ${user.email}? This will remove their role in Firestore.`)) {
-                            deleteUser(user.uid);
-                          }
-                        }}
-                        className="p-2 rounded-lg bg-zinc-800 text-zinc-600 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           )}

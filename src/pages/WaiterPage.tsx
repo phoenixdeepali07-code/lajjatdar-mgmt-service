@@ -15,7 +15,8 @@ import {
   Minus, 
   Lock, 
   LogOut, 
-  LayoutDashboard 
+  LayoutDashboard,
+  Moon
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -98,6 +99,29 @@ const WaiterPage: React.FC = () => {
     handleBack();
   };
 
+  // Case 1: Individual Shift Over (Waiter Profile Inactive)
+  if (profile?.status === 'inactive' && profile?.role !== 'admin') {
+     return (
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
+        <div className="w-24 h-24 bg-blue-500/10 rounded-full flex items-center justify-center mb-6 border border-blue-500/20 shadow-2xl shadow-blue-500/10">
+          <Moon size={48} className="text-blue-500 animate-pulse" />
+        </div>
+        <h2 className="text-3xl font-black text-white italic tracking-tighter mb-2 uppercase">Your Shift is Over</h2>
+        <p className="text-zinc-500 max-w-sm font-medium">
+          Hello {waiterName}, your profile has been set to inactive. Please contact your manager if you believe this is a mistake.
+        </p>
+        <button 
+          onClick={logout}
+          className="mt-8 flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 font-bold px-6 py-3 rounded-2xl border border-zinc-800 transition-all active:scale-95"
+        >
+          <LogOut size={20} />
+          SIGN OUT
+        </button>
+      </div>
+    );
+  }
+
+  // Case 2: Global Station Locked
   if (!settings.waiterStationEnabled && profile?.role !== 'admin') {
     return (
       <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
@@ -110,7 +134,7 @@ const WaiterPage: React.FC = () => {
         </p>
         <button 
           onClick={logout}
-          className="mt-8 flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 font-bold px-6 py-3 rounded-2xl border border-zinc-800 transition-all"
+          className="mt-8 flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 font-bold px-6 py-3 rounded-2xl border border-zinc-800 transition-all active:scale-95"
         >
           <LogOut size={20} />
           SIGN OUT
@@ -134,10 +158,10 @@ const WaiterPage: React.FC = () => {
               </button>
             )}
             <div>
-              <h1 className="text-xl font-black text-white tracking-tighter">LAJJATDAR MGMT</h1>
+              <h1 className="text-xl font-black text-white tracking-tighter">LAJJATDAR</h1>
               <div className="flex items-center gap-2 text-xs text-zinc-500 font-bold uppercase tracking-widest">
                 <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
-                WAITER STATION • {waiterName}
+                WAITER • {waiterName}
               </div>
             </div>
           </div>
@@ -149,7 +173,7 @@ const WaiterPage: React.FC = () => {
                 className="flex items-center gap-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 font-black px-4 py-2 rounded-xl transition-all border border-blue-500/20"
               >
                 <LayoutDashboard size={18} />
-                <span className="text-xs uppercase tracking-widest hidden sm:inline">Back to Admin</span>
+                <span className="text-xs uppercase tracking-widest hidden sm:inline">Admin Panel</span>
               </button>
             )}
             <button 
