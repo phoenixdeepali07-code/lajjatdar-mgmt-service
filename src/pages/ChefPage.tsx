@@ -1,9 +1,11 @@
 import React from 'react';
 import { useStore } from '../hooks/useStore';
-import { ChefHat, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useAuth } from '../components/AuthGuard';
+import { ChefHat, Clock, CheckCircle2, AlertCircle, LogOut, LayoutDashboard } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { useNavigate } from 'react-router-dom';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -11,12 +13,16 @@ function cn(...inputs: ClassValue[]) {
 
 const ChefPage: React.FC = () => {
   const { orders, updateOrderStatus } = useStore();
+  const { profile, logout } = useAuth();
+  const navigate = useNavigate();
 
   const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'preparing');
   const readyOrders = orders.filter(o => o.status === 'ready');
 
+  const chefName = profile?.name || profile?.email?.split('@')[0] || "Chef";
+
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-950">
+    <div className="flex flex-col min-h-screen bg-zinc-950 animate-in fade-in duration-500">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-zinc-900/50 backdrop-blur-xl border-b border-zinc-800 p-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -28,20 +34,41 @@ const ChefPage: React.FC = () => {
               <h1 className="text-xl font-black text-white tracking-tighter uppercase">Kitchen Display</h1>
               <div className="flex items-center gap-2 text-xs text-zinc-500 font-bold uppercase tracking-widest">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                Chef Station • Main Kitchen
+                Chef Station • {chefName}
               </div>
             </div>
           </div>
           
-          <div className="flex gap-4">
-            <div className="flex flex-col items-end">
-              <span className="text-xs font-bold text-zinc-500 uppercase">Active</span>
-              <span className="text-xl font-black text-white">{activeOrders.length}</span>
+          <div className="flex items-center gap-6">
+            <div className="hidden sm:flex gap-4">
+              <div className="flex flex-col items-end">
+                <span className="text-xs font-bold text-zinc-500 uppercase tracking-tighter">Active</span>
+                <span className="text-xl font-black text-white">{activeOrders.length}</span>
+              </div>
+              <div className="w-px h-8 bg-zinc-800 self-center"></div>
+              <div className="flex flex-col items-end">
+                <span className="text-xs font-bold text-zinc-500 uppercase tracking-tighter">Ready</span>
+                <span className="text-xl font-black text-emerald-500">{readyOrders.length}</span>
+              </div>
             </div>
-            <div className="w-px h-8 bg-zinc-800 self-center"></div>
-            <div className="flex flex-col items-end">
-              <span className="text-xs font-bold text-zinc-500 uppercase">Ready</span>
-              <span className="text-xl font-black text-emerald-500">{readyOrders.length}</span>
+
+            <div className="flex items-center gap-3 border-l border-zinc-800 pl-6">
+              {profile?.role === 'admin' && (
+                <button 
+                  onClick={() => navigate('/admin')}
+                  className="flex items-center gap-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 font-black px-4 py-2 rounded-xl transition-all border border-blue-500/20"
+                >
+                  <LayoutDashboard size={18} />
+                  <span className="text-xs uppercase tracking-widest hidden lg:inline">Back to Admin</span>
+                </button>
+              )}
+              <button 
+                onClick={logout}
+                className="p-2.5 bg-zinc-950 border border-zinc-800 text-zinc-400 hover:text-red-500 rounded-xl transition-all"
+                title="Sign Out"
+              >
+                <LogOut size={20} />
+              </button>
             </div>
           </div>
         </div>

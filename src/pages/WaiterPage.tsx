@@ -1,11 +1,25 @@
 import React, { useState } from 'react';
 import { useStore } from '../hooks/useStore';
+import { useAuth } from '../components/AuthGuard';
 import { Table, MenuItem, Order, OrderItem } from '../types';
 import TableGrid from '../components/TableGrid';
 import Menu from '../components/Menu';
-import { ArrowLeft, ShoppingBag, Send, Trash2, User, ChevronRight, Plus, Minus, Lock } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  ShoppingBag, 
+  Send, 
+  Trash2, 
+  User, 
+  ChevronRight, 
+  Plus, 
+  Minus, 
+  Lock, 
+  LogOut, 
+  LayoutDashboard 
+} from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { useNavigate } from 'react-router-dom';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -13,11 +27,15 @@ function cn(...inputs: ClassValue[]) {
 
 const WaiterPage: React.FC = () => {
   const { tables: allTables, menuItems: allMenuItems, orders, addOrder, settings } = useStore();
+  const { profile, logout } = useAuth();
+  const navigate = useNavigate();
+
   const tables = allTables.filter(t => !t.deleted);
   const menuItems = allMenuItems.filter(i => !i.deleted);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [cart, setCart] = useState<OrderItem[]>([]);
-  const [waiterName] = useState("Staff"); // Updated to generic staff
+  
+  const waiterName = profile?.name || profile?.email?.split('@')[0] || "Staff";
 
   const handleTableSelect = (table: Table) => {
     setSelectedTable(table);
@@ -80,7 +98,7 @@ const WaiterPage: React.FC = () => {
     handleBack();
   };
 
-  if (!settings.waiterStationEnabled) {
+  if (!settings.waiterStationEnabled && profile?.role !== 'admin') {
     return (
       <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
         <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mb-6 border border-red-500/20 shadow-2xl shadow-red-500/10">
@@ -90,10 +108,13 @@ const WaiterPage: React.FC = () => {
         <p className="text-zinc-500 max-w-sm font-medium">
           The Waiter Station has been temporarily disabled by the administrator. Please wait for the session to be opened.
         </p>
-        <div className="mt-8 flex gap-2 items-center bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-full">
-           <span className="w-2 h-2 rounded-full bg-red-500 mr-1"></span>
-           <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">System Offline</span>
-        </div>
+        <button 
+          onClick={logout}
+          className="mt-8 flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 font-bold px-6 py-3 rounded-2xl border border-zinc-800 transition-all"
+        >
+          <LogOut size={20} />
+          SIGN OUT
+        </button>
       </div>
     );
   }
@@ -121,9 +142,23 @@ const WaiterPage: React.FC = () => {
             </div>
           </div>
           
-          <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-full">
-            <User size={16} className="text-orange-500" />
-            <span className="text-sm font-bold text-zinc-300">Shift Active</span>
+          <div className="flex items-center gap-3">
+            {profile?.role === 'admin' && (
+              <button 
+                onClick={() => navigate('/admin')}
+                className="flex items-center gap-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 font-black px-4 py-2 rounded-xl transition-all border border-blue-500/20"
+              >
+                <LayoutDashboard size={18} />
+                <span className="text-xs uppercase tracking-widest hidden sm:inline">Back to Admin</span>
+              </button>
+            )}
+            <button 
+              onClick={logout}
+              className="p-2.5 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-red-500 rounded-xl transition-all"
+              title="Sign Out"
+            >
+              <LogOut size={20} />
+            </button>
           </div>
         </div>
       </header>
@@ -137,6 +172,11 @@ const WaiterPage: React.FC = () => {
                 <span className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-bold text-zinc-500">
                   {tables.filter(t => t.status === 'free').length} Available
                 </span>
+                {profile?.role === 'admin' && !settings.waiterStationEnabled && (
+                  <span className="px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-xs font-black text-red-500 uppercase tracking-tighter">
+                    Admin Preview Mode
+                  </span>
+                )}
               </div>
             </div>
             <TableGrid tables={tables} onTableSelect={handleTableSelect} />

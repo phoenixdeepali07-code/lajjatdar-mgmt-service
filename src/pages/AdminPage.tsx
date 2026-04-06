@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../hooks/useStore';
+import { useAuth } from '../components/AuthGuard';
 import { 
   LayoutDashboard, 
   UtensilsCrossed, 
@@ -17,7 +18,10 @@ import {
   Lock,
   Unlock,
   Power,
-  Users
+  Users,
+  LogOut,
+  ChefHat,
+  ShoppingBag
 } from 'lucide-react';
 import { Table, MenuItem, UserRole } from '../types';
 import { clsx, type ClassValue } from 'clsx';
@@ -27,6 +31,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useNavigate } from 'react-router-dom';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -48,6 +53,9 @@ const AdminPage: React.FC = () => {
     deleteUser,
     updateGlobalSettings
   } = useStore();
+
+  const { logout } = useAuth();
+  const navigate = useNavigate();
 
   const tables = allTables.filter(t => !t.deleted);
   const menuItems = allMenuItems.filter(i => !i.deleted);
@@ -132,30 +140,58 @@ const AdminPage: React.FC = () => {
             <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mt-1">Management Suite</p>
           </div>
 
-          <nav className="flex flex-col gap-2">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all",
-                  activeTab === tab.id 
-                    ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20" 
-                    : "text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
-                )}
-              >
-                <tab.icon size={20} />
-                {tab.label}
-              </button>
-            ))}
-          </nav>
+          <div className="flex flex-col gap-6">
+            <nav className="flex flex-col gap-2">
+              <span className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] ml-4 mb-2">Main Menu</span>
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all",
+                    activeTab === tab.id 
+                      ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20" 
+                      : "text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+                  )}
+                >
+                  <tab.icon size={20} />
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
 
-          <div className="mt-auto">
+            <nav className="flex flex-col gap-2">
+              <span className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] ml-4 mb-2">Stations</span>
+              <button
+                onClick={() => navigate('/waiter')}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-zinc-500 hover:bg-zinc-800 hover:text-orange-500 transition-all"
+              >
+                <ShoppingBag size={20} />
+                Waiter View
+              </button>
+              <button
+                onClick={() => navigate('/chef')}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-zinc-500 hover:bg-zinc-800 hover:text-emerald-500 transition-all"
+              >
+                <ChefHat size={20} />
+                Chef View
+              </button>
+            </nav>
+          </div>
+
+          <div className="mt-auto flex flex-col gap-4">
+            <button
+              onClick={logout}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-red-500 hover:bg-red-500/10 transition-all"
+            >
+              <LogOut size={20} />
+              Sign Out
+            </button>
             <div className="p-4 bg-zinc-800/50 rounded-2xl border border-zinc-700/50">
-              <span className="text-xs font-bold text-zinc-500 uppercase">System Status</span>
+              <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">System Status</span>
               <div className="flex items-center gap-2 mt-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                <span className="text-sm font-black text-zinc-300">ONLINE</span>
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                <span className="text-sm font-black text-zinc-300 uppercase">Online</span>
               </div>
             </div>
           </div>
@@ -185,7 +221,7 @@ const AdminPage: React.FC = () => {
               {/* System Controls */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className={cn(
-                  "p-6 rounded-3xl border flex items-center justify-between transition-all",
+                  "p-6 rounded-3xl border flex items-center justify-between transition-all outline-none",
                   settings.waiterStationEnabled 
                     ? "bg-emerald-500/5 border-emerald-500/20 shadow-lg shadow-emerald-500/5" 
                     : "bg-red-500/5 border-red-500/20 shadow-lg shadow-red-500/5"
