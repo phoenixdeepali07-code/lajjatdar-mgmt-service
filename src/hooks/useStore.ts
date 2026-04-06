@@ -29,7 +29,7 @@ export function useStore() {
   // Real-time sync for Tables
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'tables'), (snapshot) => {
-      const tablesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Table));
+      const tablesData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Table));
       setTables(tablesData.sort((a, b) => a.name.localeCompare(b.name)));
     });
     return unsubscribe;
@@ -38,7 +38,7 @@ export function useStore() {
   // Real-time sync for Menu
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'menuItems'), (snapshot) => {
-      const menuData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem));
+      const menuData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as MenuItem));
       setMenuItems(menuData.filter(i => !i.deleted));
     });
     return unsubscribe;
@@ -48,7 +48,7 @@ export function useStore() {
   useEffect(() => {
     const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+      const ordersData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Order));
       setOrders(ordersData);
       setLoading(false);
     });
@@ -58,7 +58,7 @@ export function useStore() {
   // Real-time sync for Stock
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'stock'), (snapshot) => {
-      const stockData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StockItem));
+      const stockData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StockItem));
       setStock(stockData);
     });
     return unsubscribe;
@@ -68,7 +68,7 @@ export function useStore() {
   useEffect(() => {
     const q = query(collection(db, 'expenses'), orderBy('date', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const expensesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense));
+      const expensesData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Expense));
       setExpenses(expensesData);
     });
     return unsubscribe;
@@ -77,7 +77,7 @@ export function useStore() {
   // Real-time sync for Users (Staff)
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
-      const usersData = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+      const usersData = snapshot.docs.map(doc => ({ u...doc.data(), id: doc.id } as UserProfile));
       setUsers(usersData);
     });
     return unsubscribe;
