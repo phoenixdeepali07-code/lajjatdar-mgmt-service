@@ -77,7 +77,7 @@ export function useStore() {
   // Real-time sync for Users (Staff)
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
-      const usersData = snapshot.docs.map(doc => ({ u...doc.data(), id: doc.id } as UserProfile));
+      const usersData = snapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id } as UserProfile));
       setUsers(usersData);
     });
     return unsubscribe;
