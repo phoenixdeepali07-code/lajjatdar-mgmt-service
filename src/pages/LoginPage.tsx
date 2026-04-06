@@ -50,8 +50,8 @@ const LoginPage: React.FC = () => {
           // Logged in but no profile - redirect to waiter as fallback
           navigate('/waiter', { replace: true });
         }
-      } catch (firestoreErr: any) {
-        console.warn('Firestore role check failed (possibly API disabled):', firestoreErr);
+        } catch (firestoreErr: any) {
+        console.warn('Firestore role check failed:', firestoreErr);
         // If Firestore fails, still login but go to default station
         navigate('/waiter', { replace: true });
       }
@@ -59,17 +59,21 @@ const LoginPage: React.FC = () => {
       console.error('Login Error:', err);
       
       const errorMessage = err.message || '';
+      const errorCode = err.code || '';
       
       if (errorMessage.includes('Firebase keys are missing')) {
         setError(err.message);
       } else if (errorMessage.includes('Cloud Firestore API has not been used') || errorMessage.includes('firestore.googleapis.com')) {
-        setError('Cloud Firestore API is not enabled for this project. Please enable it in the Google Cloud Console.');
-      } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        setError('Firestore API is disabled. Ensure it is ENABLED in Google Cloud Console.');
+      } else if (errorCode === 'auth/invalid-credential' || errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password') {
         setError('Invalid email or password. Please try again.');
-      } else if (err.code === 'auth/unauthorized-domain') {
-        setError('Working domain not authorized in Firebase. Add your site URL to "Authorized Domains" in Firebase Authentication.');
+      } else if (errorCode === 'auth/unauthorized-domain') {
+        setError('Domain not authorized! Add your GitHub Pages URL to "Authorized Domains" in Firebase Authentication settings.');
+      } else if (errorCode === 'auth/network-request-failed') {
+        setError('Network error. Check your internet connection or Firebase configuration.');
       } else {
-        setError('An error occurred during login. Check the console for details.');
+        // Show the actual raw error to help debugging
+        setError(`Login failed: ${errorMessage || errorCode || 'Unknown error'}`);
       }
     } finally {
       setLoading(false);
