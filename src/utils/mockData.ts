@@ -65,6 +65,12 @@ export const mockStock: StockItem[] = [
   { id: 's2', name: 'Paneer', quantity: 8, unit: 'kg', minThreshold: 3, category: 'Dairy' },
   { id: 's3', name: 'Onions', quantity: 50, unit: 'kg', minThreshold: 20, category: 'Vegetables' },
   { id: 's4', name: 'Butter', quantity: 10, unit: 'kg', minThreshold: 2, category: 'Dairy' },
+  { id: 's5', name: 'Garlic', quantity: 5, unit: 'kg', minThreshold: 2, category: 'Vegetables' },
+  { id: 's6', name: 'Ginger', quantity: 3, unit: 'kg', minThreshold: 1, category: 'Vegetables' },
+  { id: 's7', name: 'Cream', quantity: 12, unit: 'ltr', minThreshold: 4, category: 'Dairy' },
+  { id: 's8', name: 'Cooking Oil', quantity: 20, unit: 'ltr', minThreshold: 5, category: 'Supplies' },
+  { id: 's9', name: 'Salt', quantity: 10, unit: 'kg', minThreshold: 2, category: 'Supplies' },
+  { id: 's10', name: 'Sugar', quantity: 15, unit: 'kg', minThreshold: 5, category: 'Supplies' },
 ];
 
 export const mockOrders: Order[] = [];

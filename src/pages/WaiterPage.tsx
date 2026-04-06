@@ -16,36 +16,47 @@ import {
   Lock, 
   LogOut, 
   LayoutDashboard,
-  Moon
+  Moon,
+  Receipt,
+  Utensils
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useNavigate } from 'react-router-dom';
+import { formatDistanceToNow } from 'date-fns';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 const WaiterPage: React.FC = () => {
-  const { tables: allTables, menuItems: allMenuItems, orders, addOrder, settings } = useStore();
+  const { tables: allTables, menuItems: allMenuItems, orders, addOrder, updateOrderStatus, settings } = useStore();
   const { profile, logout } = useAuth();
   const navigate = useNavigate();
 
   const tables = allTables.filter(t => !t.deleted);
   const menuItems = allMenuItems.filter(i => !i.deleted);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+  const [isAddingMore, setIsAddingMore] = useState(false);
   const [cart, setCart] = useState<OrderItem[]>([]);
   
   const waiterName = profile?.name || profile?.email?.split('@')[0] || "Staff";
 
+  // Find the active order for the selected table if it's occupied
+  const activeOrder = selectedTable?.status === 'occupied' 
+    ? orders.find(o => o.tableId === selectedTable.id && o.status !== 'billed') 
+    : null;
+
   const handleTableSelect = (table: Table) => {
     setSelectedTable(table);
-    setCart([]); // Clear cart for new selection
+    setCart([]);
+    setIsAddingMore(false);
   };
 
   const handleBack = () => {
     setSelectedTable(null);
     setCart([]);
+    setIsAddingMore(false);
   };
 
   const addToCart = (item: MenuItem) => {
@@ -99,6 +110,15 @@ const WaiterPage: React.FC = () => {
     handleBack();
   };
 
+  const handleGenerateBill = () => {
+    if (activeOrder) {
+      if (window.confirm(`Generate final bill for ${selectedTable?.name}? Total: ₹${activeOrder.totalAmount}`)) {
+        updateOrderStatus(activeOrder.id, 'billed');
+        handleBack();
+      }
+    }
+  };
+
   // Case 1: Individual Shift Over (Waiter Profile Inactive)
   if (profile?.status === 'inactive' && profile?.role !== 'admin') {
      return (
@@ -144,7 +164,7 @@ const WaiterPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen animate-in fade-in duration-500">
+    <div className="flex flex-col min-h-screen animate-in fade-in duration-500 bg-zinc-950">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800 p-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -187,7 +207,7 @@ const WaiterPage: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full p-4 pb-32">
+      <main className="flex-1 max-w-7xl mx-auto w-full p-4 pb-32 overflow-y-auto">
         {!selectedTable ? (
           <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
@@ -196,34 +216,107 @@ const WaiterPage: React.FC = () => {
                 <span className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-bold text-zinc-500">
                   {tables.filter(t => t.status === 'free').length} Available
                 </span>
-                {profile?.role === 'admin' && !settings.waiterStationEnabled && (
-                  <span className="px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-xs font-black text-red-500 uppercase tracking-tighter">
-                    Admin Preview Mode
-                  </span>
-                )}
               </div>
             </div>
             <TableGrid tables={tables} onTableSelect={handleTableSelect} />
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Menu Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
+            {/* Main Content Area: Menu OR Table Summary */}
             <div className="lg:col-span-2 flex flex-col gap-6">
-              <div className="flex items-center gap-2">
-                <h2 className="text-2xl font-black text-white">Menu</h2>
-                <ChevronRight className="text-zinc-700" size={20} />
-                <span className="text-xl font-bold text-orange-500">{selectedTable.name}</span>
-              </div>
-              <Menu items={menuItems} onAddItem={addToCart} />
+              {(!activeOrder || isAddingMore) ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-2xl font-black text-white">Menu</h2>
+                      <ChevronRight className="text-zinc-700" size={20} />
+                      <span className="text-xl font-bold text-orange-500">{selectedTable.name}</span>
+                    </div>
+                    {activeOrder && (
+                      <button 
+                        onClick={() => setIsAddingMore(false)}
+                        className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-bold px-4 py-2 rounded-xl text-xs transition-all"
+                      >
+                        VIEW CURRENT BILL
+                      </button>
+                    )}
+                  </div>
+                  <Menu items={menuItems} onAddItem={addToCart} />
+                </>
+              ) : (
+                /* Billing / Summary View */
+                <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-8 flex flex-col gap-8 animate-in zoom-in-95 duration-200">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h2 className="text-3xl font-black text-white">{selectedTable.name}</h2>
+                      <p className="text-zinc-500 font-bold text-xs uppercase tracking-widest mt-1">Current Session Summary</p>
+                    </div>
+                    <div className="flex flex-col items-end">
+                       <span className={cn(
+                         "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-1",
+                         activeOrder.status === 'pending' ? "bg-orange-500/10 text-orange-500" :
+                         activeOrder.status === 'preparing' ? "bg-blue-500/10 text-blue-500" :
+                         "bg-emerald-500/10 text-emerald-500"
+                       )}>
+                         {activeOrder.status}
+                       </span>
+                       <span className="text-xs text-zinc-500 font-medium">
+                         Started {formatDistanceToNow(new Date(activeOrder.createdAt))} ago
+                       </span>
+                    </div>
+                  </div>
+
+                  <div className="divide-y divide-zinc-800">
+                    {activeOrder.items.map((item, idx) => (
+                      <div key={idx} className="py-4 flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-500 font-black">
+                            {item.quantity}
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-zinc-200">{item.name}</h4>
+                            <span className="text-xs text-zinc-500">₹{item.price} each</span>
+                          </div>
+                        </div>
+                        <span className="font-black text-white">₹{item.price * item.quantity}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 pt-8 border-t border-zinc-800 flex flex-col gap-4">
+                    <div className="flex justify-between items-end">
+                       <h3 className="text-xl font-black text-zinc-500 uppercase tracking-widest">Total Bill</h3>
+                       <span className="text-4xl font-black text-white tracking-tighter">₹{activeOrder.totalAmount}</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                      <button 
+                        onClick={() => setIsAddingMore(true)}
+                        className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-4 rounded-2xl transition-all"
+                      >
+                        <Utensils size={20} />
+                        ADD MORE ITEMS
+                      </button>
+                      <button 
+                        onClick={handleGenerateBill}
+                        className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-2xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+                      >
+                        <Receipt size={20} />
+                        GENERATE BILL
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Cart Section */}
+            {/* Sidebar Cart Section (Only visible when adding more) */}
             <div className="relative">
               <div className="sticky top-24 flex flex-col gap-4 bg-zinc-900/50 border border-zinc-800 p-6 rounded-3xl backdrop-blur-sm">
                 <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
                   <div className="flex items-center gap-2">
                     <ShoppingBag size={20} className="text-orange-500" />
-                    <h3 className="text-lg font-black text-white">Current Order</h3>
+                    <h3 className="text-lg font-black text-white">{isAddingMore ? "Add to Order" : "New Items"}</h3>
                   </div>
                   <span className="text-xs font-bold bg-orange-500/10 text-orange-500 px-2 py-1 rounded">
                     {cart.length} items
@@ -232,9 +325,9 @@ const WaiterPage: React.FC = () => {
 
                 <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                   {cart.length === 0 ? (
-                    <div className="py-12 flex flex-col items-center justify-center text-zinc-600 gap-2">
-                      <ShoppingBag size={48} className="opacity-20" />
-                      <p className="text-sm font-bold italic">No items added yet</p>
+                    <div className="py-12 flex flex-col items-center justify-center text-zinc-600 gap-2 font-medium">
+                      <ShoppingBag size={48} className="opacity-10" />
+                      <p className="text-sm italic">Nothing in cart yet</p>
                     </div>
                   ) : (
                     cart.map(item => (
@@ -274,8 +367,8 @@ const WaiterPage: React.FC = () => {
                 {cart.length > 0 && (
                   <div className="mt-4 flex flex-col gap-4 border-t border-zinc-800 pt-4">
                     <div className="flex justify-between items-end">
-                      <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Total Amount</span>
-                      <span className="text-2xl font-black text-white">₹{calculateTotal()}</span>
+                      <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Additional Total</span>
+                      <span className="text-2xl font-black text-white tracking-tighter">₹{calculateTotal()}</span>
                     </div>
                     
                     <button 
@@ -283,7 +376,7 @@ const WaiterPage: React.FC = () => {
                       className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl transition-all shadow-lg shadow-orange-500/20 active:scale-95"
                     >
                       <Send size={20} />
-                      SEND TO KITCHEN
+                      {isAddingMore ? "UPDATE KITCHEN" : "SEND TO KITCHEN"}
                     </button>
                   </div>
                 )}
