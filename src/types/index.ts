@@ -8,6 +8,7 @@ export interface MenuItem {
   category: 'Starter' | 'Main Course' | 'Dessert' | 'Beverage' | 'Bread' | 'Rice';
   image?: string;
   available: boolean;
+  deleted?: boolean;
 }
 
 export interface OrderItem {
@@ -37,6 +38,7 @@ export interface Table {
   status: 'free' | 'occupied' | 'dirty' | 'reserved';
   capacity: number;
   currentOrderId?: string;
+  deleted?: boolean;
 }
 
 export interface StockItem {
@@ -62,4 +64,17 @@ export interface Transaction {
   totalAmount: number;
   paymentMethod: 'Cash' | 'Card' | 'UPI';
   timestamp: string;
+}
+
+export type UserRole = 'admin' | 'chef' | 'waiter';
+
+export interface UserProfile {
+  uid: string;
+  email: string;
+  role: UserRole;
+  name?: string;
+}
+
+export interface GlobalSettings {
+  waiterStationEnabled: boolean;
 }

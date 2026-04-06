@@ -3,7 +3,7 @@ import { useStore } from '../hooks/useStore';
 import { Table, MenuItem, Order, OrderItem } from '../types';
 import TableGrid from '../components/TableGrid';
 import Menu from '../components/Menu';
-import { ArrowLeft, ShoppingBag, Send, Trash2, User, ChevronRight, Plus, Minus } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, Send, Trash2, User, ChevronRight, Plus, Minus, Lock } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -12,10 +12,12 @@ function cn(...inputs: ClassValue[]) {
 }
 
 const WaiterPage: React.FC = () => {
-  const { tables, menuItems, orders, addOrder } = useStore();
+  const { tables: allTables, menuItems: allMenuItems, orders, addOrder, settings } = useStore();
+  const tables = allTables.filter(t => !t.deleted);
+  const menuItems = allMenuItems.filter(i => !i.deleted);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [cart, setCart] = useState<OrderItem[]>([]);
-  const [waiterName] = useState("Rahul"); // Mock waiter
+  const [waiterName] = useState("Staff"); // Updated to generic staff
 
   const handleTableSelect = (table: Table) => {
     setSelectedTable(table);
@@ -76,11 +78,28 @@ const WaiterPage: React.FC = () => {
 
     addOrder(newOrder);
     handleBack();
-    // In a real app, I'd trigger a notification or update the UI to show success
   };
 
+  if (!settings.waiterStationEnabled) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
+        <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mb-6 border border-red-500/20 shadow-2xl shadow-red-500/10">
+          <Lock size={48} className="text-red-500 animate-pulse" />
+        </div>
+        <h2 className="text-3xl font-black text-white italic tracking-tighter mb-2">STATION LOCKED</h2>
+        <p className="text-zinc-500 max-w-sm font-medium">
+          The Waiter Station has been temporarily disabled by the administrator. Please wait for the session to be opened.
+        </p>
+        <div className="mt-8 flex gap-2 items-center bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-full">
+           <span className="w-2 h-2 rounded-full bg-red-500 mr-1"></span>
+           <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">System Offline</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen animate-in fade-in duration-500">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800 p-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -104,7 +123,7 @@ const WaiterPage: React.FC = () => {
           
           <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-full">
             <User size={16} className="text-orange-500" />
-            <span className="text-sm font-bold text-zinc-300">Shift A</span>
+            <span className="text-sm font-bold text-zinc-300">Shift Active</span>
           </div>
         </div>
       </header>
