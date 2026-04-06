@@ -20,6 +20,7 @@ export function useStore() {
   const [tables, setTables] = useState<Table[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [stock, setStock] = useState<StockItem[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [settings, setSettings] = useState<GlobalSettings>({ waiterStationEnabled: true });
   const [loading, setLoading] = useState(true);
@@ -49,6 +50,15 @@ export function useStore() {
       const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
       setOrders(ordersData);
       setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  // Real-time sync for Stock
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'stock'), (snapshot) => {
+      const stockData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StockItem));
+      setStock(stockData);
     });
     return unsubscribe;
   }, []);
@@ -92,12 +102,14 @@ export function useStore() {
   }, []);
 
   const updateOrderStatus = useCallback(async (orderId: string, status: OrderStatus) => {
+    console.log(`Updating order ${orderId} to status: ${status}`);
     try {
       const orderRef = doc(db, 'orders', orderId);
       await updateDoc(orderRef, {
         status,
         updatedAt: new Date().toISOString()
       });
+      console.log(`Successfully updated order ${orderId}`);
 
       // If billed, free the table
       if (status === 'billed') {
@@ -111,7 +123,7 @@ export function useStore() {
         }
       }
     } catch (error) {
-      console.error("Error updating order status: ", error);
+      console.error(`Error updating order status for ${orderId}: `, error);
     }
   }, [orders]);
 
@@ -165,6 +177,15 @@ export function useStore() {
       await updateDoc(itemRef, { deleted: true });
     } catch (error) {
       console.error("Error deleting menu item: ", error);
+    }
+  }, []);
+
+  const updateStockItem = useCallback(async (itemId: string, data: Partial<StockItem>) => {
+    try {
+      const itemRef = doc(db, 'stock', itemId);
+      await updateDoc(itemRef, data);
+    } catch (error) {
+       console.error("Error updating stock item: ", error);
     }
   }, []);
 
@@ -237,6 +258,7 @@ export function useStore() {
     tables,
     menuItems,
     orders,
+    stock,
     users,
     settings,
     loading,
@@ -248,6 +270,7 @@ export function useStore() {
     addMenuItem,
     updateMenuItem,
     deleteMenuItem,
+    updateStockItem,
     updateUserRole,
     updateUserStatus,
     deleteUser,

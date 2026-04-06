@@ -131,14 +131,20 @@ const ChefPage: React.FC = () => {
                 <div className="p-4 bg-zinc-950/50 border-t border-zinc-800">
                    {order.status === 'pending' ? (
                      <button 
-                       onClick={() => updateOrderStatus(order.id, 'preparing')}
+                       onClick={() => {
+                         console.log("Chef: Starting preparation for order:", order.id);
+                         updateOrderStatus(order.id, 'preparing');
+                       }}
                        className="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-orange-500 hover:text-white text-zinc-400 font-bold py-3 rounded-xl transition-all active:scale-95"
                      >
                        START PREPARING
                      </button>
                    ) : (
                      <button 
-                       onClick={() => updateOrderStatus(order.id, 'ready')}
+                       onClick={() => {
+                         console.log("Chef: Marking order as ready:", order.id);
+                         updateOrderStatus(order.id, 'ready');
+                       }}
                        className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
                      >
                        <CheckCircle2 size={20} />

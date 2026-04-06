@@ -23,9 +23,10 @@ import {
   ChefHat,
   ShoppingBag,
   ToggleLeft as Toggle,
-  RefreshCcw
+  RefreshCcw,
+  Minus
 } from 'lucide-react';
-import { Table, MenuItem, UserRole } from '../types';
+import { Table, MenuItem, UserRole, StockItem } from '../types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { firebaseConfig } from '../firebase';
@@ -44,6 +45,7 @@ const AdminPage: React.FC = () => {
     menuItems: allMenuItems, 
     tables: allTables, 
     orders, 
+    stock,
     users,
     settings,
     seedData, 
@@ -51,6 +53,7 @@ const AdminPage: React.FC = () => {
     deleteTable, 
     addMenuItem, 
     deleteMenuItem,
+    updateStockItem,
     updateUserRole,
     updateUserStatus,
     deleteUser,
@@ -134,7 +137,14 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const handleUpdateStock = (item: StockItem, delta: number) => {
+    const newQty = Math.max(0, item.quantity + delta);
+    updateStockItem(item.id, { quantity: newQty });
+  };
+
   const totalRevenue = orders.filter(o => o.status === 'billed').reduce((acc, o) => acc + o.totalAmount, 0);
+
+  const lowStockItems = stock.filter(item => item.quantity < (item.minThreshold || 10));
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-950">
@@ -276,7 +286,7 @@ const AdminPage: React.FC = () => {
                 <div className="bg-zinc-900 p-6 rounded-3xl border border-zinc-800">
                   <Package className="text-orange-500 mb-4" size={32} />
                   <span className="text-xs font-bold text-zinc-500 uppercase">Stock Alerts</span>
-                  <h3 className="text-3xl font-black text-white">3 Items</h3>
+                  <h3 className="text-3xl font-black text-white">{lowStockItems.length} Items</h3>
                 </div>
                 <div className="bg-zinc-900 p-6 rounded-3xl border border-zinc-800">
                   <UtensilsCrossed className="text-purple-500 mb-4" size={32} />
@@ -609,7 +619,7 @@ const AdminPage: React.FC = () => {
                            )}
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <h4 className={cn(
+                           <h4 className={cn(
                             "font-black truncate transition-colors",
                             user.status === 'inactive' ? "text-zinc-600 line-through" : "text-zinc-100"
                           )}>
@@ -677,35 +687,60 @@ const AdminPage: React.FC = () => {
                 </div>
               </div>
               
-              <div className="bg-orange-500/10 border border-orange-500/20 p-6 rounded-3xl flex items-center gap-4">
-                <AlertTriangle className="text-orange-500" size={32} />
-                <div>
-                  <h4 className="font-black text-orange-500">Low Stock Warning</h4>
-                  <p className="text-sm text-orange-500/70 font-medium">Onions and Chicken are below the safety threshold. Reorder soon!</p>
+              {lowStockItems.length > 0 && (
+                <div className="bg-orange-500/10 border border-orange-500/20 p-6 rounded-3xl flex items-center gap-4 animate-in fade-in duration-300">
+                  <AlertTriangle className="text-orange-500" size={32} />
+                  <div>
+                    <h4 className="font-black text-orange-500">Low Stock Warning</h4>
+                    <p className="text-sm text-orange-500/70 font-medium">
+                      {lowStockItems.map(i => i.name).join(', ')} are below the safety threshold. Reorder soon!
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {['Chicken', 'Paneer', 'Onions', 'Butter'].map((name, i) => (
-                   <div key={i} className="bg-zinc-900 p-6 rounded-3xl border border-zinc-800 flex flex-col gap-4">
+                {stock.length === 0 ? (
+                  <div className="col-span-full py-12 text-center text-zinc-600 font-bold italic">No inventory records. Seed data to begin.</div>
+                ) : (
+                  stock.map((item) => (
+                    <div key={item.id} className="bg-zinc-900 p-6 rounded-3xl border border-zinc-800 flex flex-col gap-4 group hover:border-orange-500/30 transition-all">
                       <div className="flex justify-between items-start">
-                        <h4 className="text-lg font-black text-white">{name}</h4>
-                        <span className="text-xs font-black bg-zinc-800 text-zinc-500 px-2 py-1 rounded">Vegetables</span>
+                        <h4 className="text-lg font-black text-white">{item.name}</h4>
+                        <span className="text-xs font-black bg-zinc-800 text-zinc-500 px-2 py-1 rounded uppercase">{item.unit === 'kg' ? 'Vegetables' : 'Supplies'}</span>
                       </div>
                       <div className="flex items-end justify-between">
                          <div className="flex flex-col">
                             <span className="text-xs font-bold text-zinc-500 uppercase">Quantity</span>
-                            <span className="text-3xl font-black text-white">{20 - (i * 5)} <span className="text-sm text-zinc-500">kg</span></span>
+                            <span className="text-3xl font-black text-white">{item.quantity} <span className="text-sm text-zinc-500">{item.unit}</span></span>
                          </div>
-                         <div className="w-32 h-2 bg-zinc-800 rounded-full overflow-hidden">
-                            <div 
-                              className={cn("h-full rounded-full", (20 - i*5) < 10 ? "bg-orange-500" : "bg-emerald-500")}
-                              style={{ width: `${(20 - i*5)/20 * 100}%` }}
-                            ></div>
+                         <div className="flex items-center gap-2 bg-zinc-950 p-1.5 rounded-2xl border border-zinc-800">
+                            <button 
+                              onClick={() => handleUpdateStock(item, -1)}
+                              className="p-1.5 hover:bg-zinc-800 rounded-xl transition-colors text-zinc-500 hover:text-red-500"
+                            >
+                              <Minus size={16} />
+                            </button>
+                            <button 
+                              onClick={() => handleUpdateStock(item, 1)}
+                              className="p-1.5 hover:bg-zinc-800 rounded-xl transition-colors text-orange-500"
+                            >
+                              <Plus size={16} />
+                            </button>
                          </div>
                       </div>
-                   </div>
-                ))}
+                      <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                        <div 
+                          className={cn(
+                            "h-full rounded-full transition-all duration-500", 
+                            item.quantity < (item.minThreshold || 10) ? "bg-orange-500" : "bg-emerald-500"
+                          )}
+                          style={{ width: `${Math.min(100, (item.quantity / (item.minThreshold ? item.minThreshold * 2 : 20)) * 100)}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}
