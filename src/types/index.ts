@@ -47,7 +47,7 @@ export interface StockItem {
   quantity: number;
   unit: string;
   minThreshold: number;
-  category: 'Vegetables' | 'Dairy' | 'Grain' | 'Spices' | 'Meat' | 'Other';
+  category: 'Vegetables' | 'Dairy' | 'Grain' | 'Spices' | 'Meat' | 'Supplies' | 'Beverage' | 'Other';
 }
 
 export interface Expense {
