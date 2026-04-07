@@ -30,7 +30,7 @@ function cn(...inputs: ClassValue[]) {
 }
 
 const WaiterPage: React.FC = () => {
-  const { tables: allTables, menuItems: allMenuItems, orders, addOrder, updateOrderStatus, settings } = useStore();
+  const { tables: allTables, menuItems: allMenuItems, orders, addOrder, updateOrderStatus, clearTable, settings } = useStore();
   const { profile, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -224,7 +224,26 @@ const WaiterPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
             {/* Main Content Area: Menu OR Table Summary */}
             <div className="lg:col-span-2 flex flex-col gap-6">
-              {(!activeOrder || isAddingMore) ? (
+              {selectedTable.status === 'dirty' ? (
+                <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-12 flex flex-col items-center justify-center gap-6 text-center animate-in zoom-in-95 duration-200">
+                  <div className="w-20 h-20 bg-orange-500/10 rounded-full flex items-center justify-center border border-orange-500/20">
+                    <Receipt size={40} className="text-orange-500" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-black text-white italic tracking-tighter uppercase">Table Dirty</h2>
+                    <p className="text-zinc-500 max-w-xs font-medium mt-1">This table is waiting to be cleared after billing. Mark it as free for the next customer.</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      clearTable(selectedTable.id);
+                      handleBack();
+                    }}
+                    className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black px-8 py-4 rounded-2xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95 uppercase tracking-widest mt-4"
+                  >
+                    Mark as Free & Ready
+                  </button>
+                </div>
+              ) : (!activeOrder || isAddingMore) ? (
                 <>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">

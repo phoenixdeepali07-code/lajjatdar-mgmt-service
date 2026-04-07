@@ -57,12 +57,12 @@ const AdminPage: React.FC = () => {
     users,
     settings,
     seedData, 
-    addTable, 
-    deleteTable, 
-    addMenuItem, 
-    deleteMenuItem,
-    updateStockItem,
     addExpense,
+    updateTable,
+    clearTable,
+    updateStockItem,
+    addStockItem,
+    deleteStockItem,
     updateUserRole,
     updateUserStatus,
     deleteUser,
@@ -82,6 +82,10 @@ const AdminPage: React.FC = () => {
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [staffLoading, setStaffLoading] = useState(false);
   const [staffError, setStaffError] = useState('');
+  const [showEditTable, setShowEditTable] = useState<Table | null>(null);
+  const [showEditStock, setShowEditStock] = useState<StockItem | null>(null);
+  const [selectedBill, setSelectedBill] = useState<Order | null>(null);
+  const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   
   // Form States
   const [newTable, setNewTable] = useState({ name: '', capacity: 4 });
@@ -98,6 +102,13 @@ const AdminPage: React.FC = () => {
     amount: 0,
     category: 'Grocery',
     date: new Date().toISOString()
+  });
+  const [newStock, setNewStock] = useState<Omit<StockItem, 'id'>>({
+    name: '',
+    quantity: 0,
+    unit: 'kg',
+    minThreshold: 5,
+    category: 'Vegetables'
   });
 
   const tabs = [
@@ -161,7 +172,13 @@ const AdminPage: React.FC = () => {
       setShowAddExpense(false);
     } catch (err) {
       console.error("Error adding expense:", err);
+      showToast("Failed to add expense", 'error');
     }
+  };
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
   };
 
   const handleUpdateStock = (item: StockItem, delta: number) => {
@@ -178,52 +195,61 @@ const AdminPage: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen bg-zinc-950">
       <div className="flex flex-col lg:flex-row min-h-screen">
-        <aside className="w-full lg:w-64 bg-zinc-900 border-r border-zinc-800 p-6 flex flex-col gap-8">
-          <div>
-            <h1 className="text-xl font-black text-white tracking-tighter">LAJJATDAR</h1>
-            <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mt-1">Management Suite</p>
+        <aside className={cn(
+          "bg-zinc-900 border-r border-zinc-800 p-6 flex flex-col gap-8 transition-all duration-300",
+          "w-full lg:w-64",
+          // On mobile, if we want to show/hide, we could, but let's make it a horizontal scroll or compact list
+          "block"
+        )}>
+          <div className="flex items-center justify-between lg:block">
+            <div>
+              <h1 className="text-xl font-black text-white tracking-tighter">LAJJATDAR</h1>
+              <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mt-1">Management Suite</p>
+            </div>
+            {/* Mobile Logout (optional) */}
+            <button onClick={logout} className="lg:hidden p-2 text-red-500 hover:bg-red-500/10 rounded-xl"><LogOut size={20} /></button>
           </div>
 
-          <div className="flex flex-col gap-6">
-            <nav className="flex flex-col gap-2">
-              <span className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] ml-4 mb-2">Main Menu</span>
+          <div className="flex flex-row lg:flex-col gap-6 overflow-x-auto lg:overflow-x-visible pb-4 lg:pb-0 scrollbar-hide">
+            <nav className="flex flex-row lg:flex-col gap-2 shrink-0">
+              <span className="hidden lg:block text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] ml-4 mb-2">Main Menu</span>
               {tabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
                   className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all",
+                    "flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all whitespace-nowrap",
                     activeTab === tab.id 
                       ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20" 
                       : "text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
                   )}
                 >
                   <tab.icon size={20} />
-                  {tab.label}
+                  <span className="text-sm lg:text-base">{tab.label}</span>
                 </button>
               ))}
             </nav>
 
-            <nav className="flex flex-col gap-2">
-              <span className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] ml-4 mb-2">Live Stations</span>
+            <nav className="flex flex-row lg:flex-col gap-2 shrink-0">
+              <span className="hidden lg:block text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] ml-4 mb-2">Live Stations</span>
               <button
                 onClick={() => navigate('/waiter')}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-zinc-500 hover:bg-zinc-800 hover:text-orange-500 transition-all border border-transparent hover:border-orange-500/20"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-zinc-500 hover:bg-zinc-800 hover:text-orange-500 transition-all border border-transparent hover:border-orange-500/20 whitespace-nowrap"
               >
                 <ShoppingBag size={20} />
-                Waiter View
+                <span className="text-sm lg:text-base">Waiter View</span>
               </button>
               <button
                 onClick={() => navigate('/chef')}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-zinc-500 hover:bg-zinc-800 hover:text-emerald-500 transition-all border border-transparent hover:border-emerald-500/20"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-zinc-500 hover:bg-zinc-800 hover:text-emerald-500 transition-all border border-transparent hover:border-emerald-500/20 whitespace-nowrap"
               >
                 <ChefHat size={20} />
-                Chef View
+                <span className="text-sm lg:text-base">Chef View</span>
               </button>
             </nav>
           </div>
 
-          <div className="mt-auto flex flex-col gap-4">
+          <div className="hidden lg:flex mt-auto flex-col gap-4">
             <button
               onClick={logout}
               className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-red-500 hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/20"
@@ -537,12 +563,69 @@ const AdminPage: React.FC = () => {
                         )}>
                           {table.status}
                         </span>
-                        <button className="text-xs font-bold text-zinc-500 hover:text-white transition-colors">EDIT DETAILS</button>
+                        <div className="flex gap-2">
+                           {table.status === 'dirty' && (
+                             <button 
+                               onClick={() => clearTable(table.id)}
+                               className="text-[10px] font-black text-emerald-500 hover:text-emerald-400 transition-colors uppercase tracking-widest border border-emerald-500/20 px-2 py-1 rounded-lg bg-emerald-500/5 hover:bg-emerald-500/10"
+                             >
+                               Mark Free
+                             </button>
+                           )}
+                           <button 
+                             onClick={() => setShowEditTable(table)}
+                             className="text-xs font-bold text-zinc-500 hover:text-white transition-colors"
+                           >
+                             EDIT
+                           </button>
+                        </div>
                       </div>
                     </div>
                   ))
                 )}
               </div>
+
+              {/* Edit Table Modal */}
+              {showEditTable && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-6 backdrop-blur-md bg-zinc-950/40 animate-in fade-in duration-200">
+                  <div className="bg-zinc-900 w-full max-w-lg rounded-3xl border border-zinc-800 shadow-2xl p-8 flex flex-col gap-6">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-2xl font-black text-white italic">Edit Table Details</h3>
+                      <button onClick={() => setShowEditTable(null)} className="p-2 hover:bg-zinc-800 rounded-xl text-zinc-500"><X size={24} /></button>
+                    </div>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-2">
+                         <label className="text-xs font-black text-zinc-500 uppercase tracking-widest ml-1">Table Name</label>
+                         <input 
+                            type="text" 
+                            className="bg-zinc-950 border border-zinc-800 p-4 rounded-2xl text-white focus:outline-none focus:border-blue-500 font-bold"
+                            value={showEditTable.name}
+                            onChange={e => setShowEditTable({...showEditTable, name: e.target.value})}
+                         />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                         <label className="text-xs font-black text-zinc-500 uppercase tracking-widest ml-1">Capacity</label>
+                         <input 
+                            type="number" 
+                            className="bg-zinc-950 border border-zinc-800 p-4 rounded-2xl text-white focus:outline-none focus:border-blue-500 font-black"
+                            value={showEditTable.capacity}
+                            onChange={e => setShowEditTable({...showEditTable, capacity: Number(e.target.value)})}
+                         />
+                      </div>
+                      <button 
+                        onClick={async () => {
+                          await updateTable(showEditTable.id, { name: showEditTable.name, capacity: showEditTable.capacity });
+                          setShowEditTable(null);
+                          showToast("Table updated successfully");
+                        }}
+                        className="bg-blue-500 hover:bg-blue-600 text-white font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95"
+                      >
+                        SAVE CHANGES
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -708,12 +791,22 @@ const AdminPage: React.FC = () => {
           )}
 
           {activeTab === 'stock' && (
-            <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex justify-between items-center">
                 <div>
                   <h2 className="text-3xl font-black text-white italic">Inventory Control</h2>
-                  <p className="text-zinc-500 font-medium">Track grocery stock levels</p>
+                  <p className="text-zinc-500 font-medium">Track and manage grocery stock levels</p>
                 </div>
+                <button 
+                  onClick={() => {
+                    setNewStock({ name: '', quantity: 0, unit: 'kg', minThreshold: 5, category: 'Vegetables' });
+                    setShowEditStock({ id: 'new', name: '', quantity: 0, unit: 'kg', minThreshold: 5, category: 'Vegetables' });
+                  }}
+                  className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-black px-6 py-3 rounded-2xl transition-all shadow-lg shadow-orange-500/20 active:scale-95"
+                >
+                  <Plus size={20} />
+                  <span className="hidden sm:inline">ADD ITEM</span>
+                </button>
               </div>
               
               {lowStockItems.length > 0 && (
@@ -735,8 +828,29 @@ const AdminPage: React.FC = () => {
                   stock.map((item) => (
                     <div key={item.id} className="bg-zinc-900 p-6 rounded-3xl border border-zinc-800 flex flex-col gap-4 group hover:border-orange-500/30 transition-all">
                       <div className="flex justify-between items-start">
-                        <h4 className="text-lg font-black text-white">{item.name}</h4>
-                        <span className="text-xs font-black bg-zinc-800 text-zinc-500 px-2 py-1 rounded uppercase">{item.category}</span>
+                        <div className="flex flex-col">
+                          <h4 className="text-lg font-black text-white">{item.name}</h4>
+                          <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1 italic">{item.category}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => setShowEditStock(item)}
+                            className="p-2 rounded-xl bg-zinc-800 text-zinc-500 hover:text-blue-500 transition-colors"
+                          >
+                            <Edit3 size={16} />
+                          </button>
+                          <button 
+                            onClick={async () => {
+                              if (window.confirm(`Delete ${item.name} from inventory?`)) {
+                                await deleteStockItem(item.id);
+                                showToast(`${item.name} removed from stock`);
+                              }
+                            }}
+                            className="p-2 rounded-xl bg-zinc-800 text-zinc-500 hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
                       <div className="flex items-end justify-between">
                          <div className="flex flex-col">
@@ -771,6 +885,105 @@ const AdminPage: React.FC = () => {
                   ))
                 )}
               </div>
+
+              {/* Add/Edit Stock Modal */}
+              {showEditStock && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-6 backdrop-blur-md bg-zinc-950/40 animate-in fade-in duration-200">
+                  <div className="bg-zinc-900 w-full max-w-lg rounded-3xl border border-zinc-800 shadow-2xl p-8 flex flex-col gap-6">
+                    <div className="flex justify-between items-center">
+                      <h2 className="text-2xl font-black text-white italic">
+                        {showEditStock.id === 'new' ? 'Add New Item' : 'Edit Stock Item'}
+                      </h2>
+                      <button onClick={() => setShowEditStock(null)} className="p-2 hover:bg-zinc-800 rounded-xl text-zinc-500">
+                        <X size={24} />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       <div className="flex flex-col gap-2 md:col-span-2">
+                         <label className="text-xs font-black text-zinc-500 uppercase tracking-widest ml-1">Item Name</label>
+                         <input 
+                            type="text" 
+                            className="bg-zinc-950 border border-zinc-800 p-4 rounded-2xl text-white focus:outline-none focus:border-orange-500 font-bold"
+                            value={showEditStock.name}
+                            onChange={e => setShowEditStock({...showEditStock, name: e.target.value})}
+                         />
+                       </div>
+
+                       <div className="flex flex-col gap-2">
+                         <label className="text-xs font-black text-zinc-500 uppercase tracking-widest ml-1">Quantity</label>
+                         <input 
+                            type="number" 
+                            className="bg-zinc-950 border border-zinc-800 p-4 rounded-2xl text-white focus:outline-none focus:border-orange-500 font-black"
+                            value={showEditStock.quantity}
+                            onChange={e => setShowEditStock({...showEditStock, quantity: Number(e.target.value)})}
+                         />
+                       </div>
+
+                       <div className="flex flex-col gap-2">
+                         <label className="text-xs font-black text-zinc-500 uppercase tracking-widest ml-1">Unit</label>
+                         <input 
+                            type="text" 
+                            className="bg-zinc-950 border border-zinc-800 p-4 rounded-2xl text-white focus:outline-none focus:border-orange-500 font-bold"
+                            value={showEditStock.unit}
+                            onChange={e => setShowEditStock({...showEditStock, unit: e.target.value})}
+                         />
+                       </div>
+
+                       <div className="flex flex-col gap-2">
+                         <label className="text-xs font-black text-zinc-500 uppercase tracking-widest ml-1">Category</label>
+                         <select 
+                            className="bg-zinc-950 border border-zinc-800 p-4 rounded-2xl text-white focus:outline-none focus:border-orange-500 font-black uppercase text-xs"
+                            value={showEditStock.category}
+                            onChange={e => setShowEditStock({...showEditStock, category: e.target.value as any})}
+                         >
+                           <option value="Vegetables">Vegetables</option>
+                           <option value="Dairy">Dairy</option>
+                           <option value="Grain">Grain</option>
+                           <option value="Spices">Spices</option>
+                           <option value="Meat">Meat</option>
+                           <option value="Supplies">Supplies</option>
+                           <option value="Beverage">Beverage</option>
+                           <option value="Other">Other</option>
+                         </select>
+                       </div>
+
+                       <div className="flex flex-col gap-2">
+                         <label className="text-xs font-black text-zinc-500 uppercase tracking-widest ml-1">Threshold</label>
+                         <input 
+                            type="number" 
+                            className="bg-zinc-950 border border-zinc-800 p-4 rounded-2xl text-white focus:outline-none focus:border-orange-500 font-black"
+                            value={showEditStock.minThreshold}
+                            onChange={e => setShowEditStock({...showEditStock, minThreshold: Number(e.target.value)})}
+                         />
+                       </div>
+                    </div>
+
+                    <button 
+                      onClick={async () => {
+                        if (showEditStock.id === 'new') {
+                          const { id, ...itemToSave } = showEditStock;
+                          await addStockItem(itemToSave);
+                          showToast("Stock item added");
+                        } else {
+                          await updateStockItem(showEditStock.id, {
+                            name: showEditStock.name,
+                            quantity: showEditStock.quantity,
+                            unit: showEditStock.unit,
+                            category: showEditStock.category,
+                            minThreshold: showEditStock.minThreshold
+                          });
+                          showToast("Stock item updated");
+                        }
+                        setShowEditStock(null);
+                      }}
+                      className="bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95 mt-4"
+                    >
+                      {showEditStock.id === 'new' ? 'CREATE ITEM' : 'SAVE CHANGES'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -841,9 +1054,13 @@ const AdminPage: React.FC = () => {
                       <div className="py-20 text-center text-zinc-700 italic font-bold">No bills generated yet.</div>
                     ) : (
                       orders.filter(o => o.status === 'billed').map(order => (
-                        <div key={order.id} className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800/50 flex items-center justify-between group hover:border-emerald-500/20 transition-all">
+                        <div 
+                          key={order.id} 
+                          onClick={() => setSelectedBill(order)}
+                          className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800/50 flex items-center justify-between group hover:border-emerald-500/20 hover:bg-zinc-900 transition-all cursor-pointer"
+                        >
                           <div className="flex items-center gap-4">
-                            <div className="p-3 bg-zinc-900 rounded-xl text-emerald-500">
+                            <div className="p-3 bg-zinc-900 rounded-xl text-emerald-500 group-hover:bg-zinc-800">
                               <IndianRupee size={20} />
                             </div>
                             <div>
@@ -851,7 +1068,7 @@ const AdminPage: React.FC = () => {
                                <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">
                                  <span>{format(new Date(order.updatedAt), 'MMM d, HH:mm')}</span>
                                  <span>•</span>
-                                 <span>{order.waiterName}</span>
+                                 <span className="group-hover:text-emerald-500 transition-colors">VIEW DETAILS</span>
                                </div>
                             </div>
                           </div>
@@ -969,6 +1186,119 @@ const AdminPage: React.FC = () => {
           )}
         </main>
       </div>
+
+      {/* Bill Details Modal */}
+      {selectedBill && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 backdrop-blur-md bg-zinc-950/60 animate-in fade-in duration-300">
+          <div className="bg-zinc-900 w-full max-w-lg rounded-3xl border border-zinc-800 shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+             <div className="p-8 border-b border-zinc-800 flex justify-between items-start bg-zinc-950/50">
+               <div>
+                 <h2 className="text-3xl font-black text-white italic tracking-tighter">RECEIPT</h2>
+                 <p className="text-zinc-500 font-bold text-xs uppercase tracking-[0.2em] mt-1">{selectedBill.id.slice(-8)}</p>
+               </div>
+               <button onClick={() => setSelectedBill(null)} className="p-2 hover:bg-zinc-800 rounded-xl text-zinc-500"><X size={24} /></button>
+             </div>
+             
+             <div id="printable-bill" className="p-8 flex flex-col gap-6 bg-zinc-900">
+               <div className="flex justify-between items-end border-b border-zinc-800 pb-4">
+                  <div>
+                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Table</span>
+                    <h4 className="text-xl font-black text-white uppercase italic">{selectedBill.tableName}</h4>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Date</span>
+                    <p className="text-sm font-bold text-zinc-300">{format(new Date(selectedBill.updatedAt), 'dd/MM/yyyy HH:mm')}</p>
+                  </div>
+               </div>
+
+               <div className="flex flex-col gap-4">
+                 <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Order Details</span>
+                 <div className="space-y-4">
+                   {selectedBill.items.map((item: any, idx: number) => (
+                     <div key={idx} className="flex justify-between items-center text-sm font-medium">
+                       <div className="flex items-center gap-3">
+                         <span className="text-zinc-500 font-black">x{item.quantity}</span>
+                         <span className="text-zinc-200 font-bold">{item.name}</span>
+                       </div>
+                       <span className="text-zinc-100 font-black">₹{item.price * item.quantity}</span>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+
+               <div className="mt-4 pt-6 border-t border-dashed border-zinc-700 flex flex-col gap-4">
+                 <div className="flex justify-between items-end">
+                   <span className="text-sm font-black text-zinc-500 uppercase tracking-widest">Subtotal</span>
+                   <span className="text-xl font-black text-white">₹{selectedBill.totalAmount}</span>
+                 </div>
+                 <div className="flex justify-between items-end text-emerald-500">
+                   <span className="text-sm font-black uppercase tracking-widest">Taxes</span>
+                   <span className="text-xl font-black italic">₹0.00</span>
+                 </div>
+                 <div className="mt-2 p-4 bg-zinc-950 rounded-2xl flex justify-between items-center border border-zinc-800">
+                   <span className="text-lg font-black text-zinc-400 uppercase tracking-widest">Final Bill</span>
+                   <span className="text-3xl font-black text-white tracking-tighter italic">₹{selectedBill.totalAmount}</span>
+                 </div>
+               </div>
+               
+               <div className="text-center mt-4">
+                 <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">Thank you for visiting Lajjatdar</p>
+               </div>
+             </div>
+
+             <div className="p-8 border-t border-zinc-800 flex gap-4 bg-zinc-950/50">
+               <button 
+                 onClick={() => {
+                   window.print();
+                 }}
+                 className="flex-1 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-2xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+               >
+                 <Receipt size={20} />
+                 PRINT BILL
+               </button>
+               <button 
+                onClick={() => setSelectedBill(null)}
+                className="px-6 py-4 rounded-2xl bg-zinc-800 text-zinc-400 font-bold hover:bg-zinc-700 transition-colors"
+               >
+                 CLOSE
+               </button>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className={cn(
+          "fixed bottom-6 right-6 z-[100] px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-right-10 duration-300 font-black uppercase text-xs tracking-widest border",
+          toast.type === 'success' ? "bg-emerald-500 text-white border-emerald-400/20" : "bg-red-500 text-white border-red-400/20"
+        )}>
+           {toast.type === 'success' ? <ShieldCheck size={18} /> : <AlertTriangle size={18} />}
+           {toast.message}
+        </div>
+      )}
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #printable-bill, #printable-bill * {
+            visibility: visible;
+          }
+          #printable-bill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            background: white !important;
+            color: black !important;
+          }
+          #printable-bill * {
+             color: black !important;
+          }
+        }
+      `}} />
     </div>
   );
 };

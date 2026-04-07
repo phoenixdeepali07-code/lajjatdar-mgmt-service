@@ -98,11 +98,16 @@ export function useStore() {
 
   const addOrder = useCallback(async (order: Order) => {
     try {
-      await addDoc(collection(db, 'orders'), order);
+      // Use setDoc with a specific ID to ensure consistency between data.id and doc.id
+      const newOrderRef = doc(collection(db, 'orders'));
+      const orderWithId = { ...order, id: newOrderRef.id, updatedAt: new Date().toISOString() };
+      
+      await setDoc(newOrderRef, orderWithId);
+      
       const tableRef = doc(db, 'tables', order.tableId);
       await updateDoc(tableRef, {
         status: 'occupied',
-        currentOrderId: order.id
+        currentOrderId: newOrderRef.id
       });
     } catch (error) {
       console.error("Error adding order: ", error);
@@ -175,6 +180,18 @@ export function useStore() {
     }
   }, []);
 
+  const clearTable = useCallback(async (tableId: string) => {
+    try {
+      const tableRef = doc(db, 'tables', tableId);
+      await updateDoc(tableRef, { 
+        status: 'free', 
+        currentOrderId: null 
+      });
+    } catch (error) {
+      console.error("Error clearing table: ", error);
+    }
+  }, []);
+
   const addMenuItem = useCallback(async (item: Omit<MenuItem, 'id'>) => {
     try {
       await addDoc(collection(db, 'menuItems'), item);
@@ -207,6 +224,23 @@ export function useStore() {
       await updateDoc(itemRef, data);
     } catch (error) {
        console.error("Error updating stock item: ", error);
+    }
+  }, []);
+
+  const addStockItem = useCallback(async (item: Omit<StockItem, 'id'>) => {
+    try {
+      await addDoc(collection(db, 'stock'), item);
+    } catch (error) {
+       console.error("Error adding stock item: ", error);
+    }
+  }, []);
+
+  const deleteStockItem = useCallback(async (itemId: string) => {
+    try {
+      const itemRef = doc(db, 'stock', itemId);
+      await deleteDoc(itemRef);
+    } catch (error) {
+       console.error("Error deleting stock item: ", error);
     }
   }, []);
 
@@ -287,6 +321,9 @@ export function useStore() {
     updateMenuItem,
     deleteMenuItem,
     updateStockItem,
+    addStockItem,
+    deleteStockItem,
+    clearTable,
     updateUserRole,
     updateUserStatus,
     deleteUser,
