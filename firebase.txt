@@ -1,0 +1,30 @@
+To actually log in and use the application on GitHub Pages, yes, you must set up Firebase.
+
+Right now, the site is using placeholder keys (which is why you can see the screen, but it can't talk to a database).
+
+Here is exactly what you need to do:
+
+Step 1: Get Your Firebase Keys
+Go to the Firebase Console and create a new project (or open an existing one).
+Add a Web App to your project to get your configuration keys (apiKey, authDomain, projectId, etc.).
+In the Firebase Console, go to Authentication -> Sign-in method and enable Email/Password.
+While in Authentication, go to the Users tab and create your first admin user email and password.
+Step 2: Add Keys to GitHub Secrets
+Since your site is hosted on GitHub, we have to pass those keys securely to the deployment action.
+
+Go to your GitHub repository: phoenixdeepali07-code/lajjatdar-mgmt-service
+Go to Settings -> Secrets and variables (on the left sidebar) -> Actions.
+Click the green New repository secret button.
+You need to create a new secret for each of these exact names, pasting the corresponding value from your Firebase config:
+VITE_FIREBASE_API_KEY
+VITE_FIREBASE_AUTH_DOMAIN
+VITE_FIREBASE_PROJECT_ID
+VITE_FIREBASE_STORAGE_BUCKET
+VITE_FIREBASE_MESSAGING_SENDER_ID
+VITE_FIREBASE_APP_ID
+Step 3: Let Me Update the Workflow
+Once you have added those secrets in GitHub, let me know! I will add a few lines to our 
+
+deploy.yml
+ file so that GitHub Actions automatically injects your secret keys into the application every time it builds.
+
