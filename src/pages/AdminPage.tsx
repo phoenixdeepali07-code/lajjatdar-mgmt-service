@@ -62,6 +62,7 @@ const AdminPage: React.FC = () => {
     deleteTable, 
     addMenuItem, 
     deleteMenuItem,
+    updateMenuItem,
     updateTable,
     clearTable,
     updateStockItem,
@@ -88,6 +89,7 @@ const AdminPage: React.FC = () => {
   const [staffError, setStaffError] = useState('');
   const [showEditTable, setShowEditTable] = useState<Table | null>(null);
   const [showEditStock, setShowEditStock] = useState<StockItem | null>(null);
+  const [showEditMenu, setShowEditMenu] = useState<MenuItem | null>(null);
   const [selectedBill, setSelectedBill] = useState<Order | null>(null);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   
@@ -472,7 +474,12 @@ const AdminPage: React.FC = () => {
                       <div className="flex items-center gap-6">
                         <span className="text-xl font-black text-white">₹{item.price}</span>
                         <div className="flex gap-2">
-                          <button className="p-2 rounded-lg bg-zinc-800 text-zinc-400 hover:text-blue-500 transition-colors"><Edit3 size={18} /></button>
+                          <button 
+                            onClick={() => setShowEditMenu(item)}
+                            className="p-2 rounded-lg bg-zinc-800 text-zinc-400 hover:text-blue-500 transition-colors"
+                          >
+                            <Edit3 size={18} />
+                          </button>
                           <button 
                             onClick={() => deleteMenuItem(item.id)}
                             className="p-2 rounded-lg bg-zinc-800 text-zinc-400 hover:text-red-500 transition-colors"
@@ -485,6 +492,72 @@ const AdminPage: React.FC = () => {
                   ))
                 )}
               </div>
+
+              {/* Edit Menu Item Modal */}
+              {showEditMenu && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-6 backdrop-blur-md bg-zinc-950/40 animate-in fade-in duration-200">
+                  <div className="bg-zinc-900 w-full max-w-lg rounded-3xl border border-zinc-800 shadow-2xl p-8 flex flex-col gap-6">
+                    <div className="flex justify-between items-center">
+                      <h2 className="text-2xl font-black text-white italic">Edit Menu Item</h2>
+                      <button onClick={() => setShowEditMenu(null)} className="p-2 hover:bg-zinc-800 rounded-xl text-zinc-500">
+                        <X size={24} />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4">
+                       <div className="flex flex-col gap-2">
+                         <label className="text-xs font-black text-zinc-500 uppercase tracking-widest ml-1">Item Name</label>
+                         <input 
+                            type="text" 
+                            className="bg-zinc-950 border border-zinc-800 p-4 rounded-2xl text-white focus:outline-none focus:border-blue-500 font-bold"
+                            value={showEditMenu.name}
+                            onChange={e => setShowEditMenu({...showEditMenu, name: e.target.value})}
+                         />
+                       </div>
+
+                       <div className="flex flex-col gap-2">
+                         <label className="text-xs font-black text-zinc-500 uppercase tracking-widest ml-1">Category</label>
+                         <select 
+                            className="bg-zinc-950 border border-zinc-800 p-4 rounded-2xl text-white focus:outline-none focus:border-blue-500 font-black"
+                            value={showEditMenu.category}
+                            onChange={e => setShowEditMenu({...showEditMenu, category: e.target.value as any})}
+                         >
+                           <option value="Starter">Starter</option>
+                           <option value="Main Course">Main Course</option>
+                           <option value="Dessert">Dessert</option>
+                           <option value="Beverage">Beverage</option>
+                           <option value="Bread">Bread</option>
+                         </select>
+                       </div>
+
+                       <div className="flex flex-col gap-2">
+                         <label className="text-xs font-black text-zinc-500 uppercase tracking-widest ml-1">Price (₹)</label>
+                         <input 
+                            type="number" 
+                            className="bg-zinc-950 border border-zinc-800 p-4 rounded-2xl text-white focus:outline-none focus:border-blue-500 font-black"
+                            value={showEditMenu.price}
+                            onChange={e => setShowEditMenu({...showEditMenu, price: Number(e.target.value)})}
+                         />
+                       </div>
+                    </div>
+
+                    <button 
+                      onClick={async () => {
+                        await updateMenuItem(showEditMenu.id, {
+                          name: showEditMenu.name,
+                          category: showEditMenu.category,
+                          price: showEditMenu.price
+                        });
+                        showToast("Menu item updated successfully");
+                        setShowEditMenu(null);
+                      }}
+                      className="bg-blue-500 hover:bg-blue-600 text-white font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95 mt-4"
+                    >
+                      SAVE CHANGES
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
