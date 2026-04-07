@@ -32,7 +32,7 @@ import {
   IndianRupee,
   Briefcase
 } from 'lucide-react';
-import { Table, MenuItem, UserRole, StockItem, Expense } from '../types';
+import { Table, MenuItem, UserRole, StockItem, Expense, Order } from '../types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { firebaseConfig } from '../firebase';
@@ -58,6 +58,10 @@ const AdminPage: React.FC = () => {
     settings,
     seedData, 
     addExpense,
+    addTable, 
+    deleteTable, 
+    addMenuItem, 
+    deleteMenuItem,
     updateTable,
     clearTable,
     updateStockItem,
